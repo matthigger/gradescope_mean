@@ -55,3 +55,15 @@ class Gradebook:
         for ass in self.ass_list:
             ass_late = ass + self.ass_list.LATE
             self.df_lateday[ass] = df_scope[ass_late].map(get_days_late)
+
+    def waive(self, waive_dict):
+        """ waives assignments by marking percentages as nan
+
+        Args:
+            waive_dict (dict): keys are emails, values are strings of comma
+                seperated assignments (e.g. 'hw1, hw2')
+        """
+
+        for email, ass_many in waive_dict.items():
+            for ass in ass_many.split(','):
+                self.df.loc[email, ass] = np.nan
