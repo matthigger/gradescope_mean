@@ -32,3 +32,12 @@ class TestGradebook:
 
         assert np.allclose([1, 1, 1, 1, 1], gradebook.df['hw2'])
         assert np.allclose([1, 0, 0, .5, .5], gradebook.df['hw1'])
+
+    def test_remove(self, gradebook):
+        ass = 'hw1'
+        gradebook.remove(ass)
+
+        assert ass not in gradebook.df.columns
+        assert ass not in gradebook.df_lateday.columns
+        assert ass not in gradebook.ass_list
+        assert np.allclose([2, 3, 4], gradebook.points)

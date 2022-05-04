@@ -58,7 +58,7 @@ class Gradebook:
             self.df_lateday[ass] = df_scope[ass_late].map(get_days_late)
 
     def waive(self, waive_dict):
-        """ waives assignments by marking percentages as nan
+        """ waives assignment (per student) by marking percentages as nan
 
         Args:
             waive_dict (dict): keys are emails, values are strings of comma
@@ -95,3 +95,19 @@ class Gradebook:
         # substitute
         for ass_to, s in new_col_dict.items():
             self.df[ass_to] = s
+
+    def remove(self, ass):
+        """ deletes an assignment
+
+        Args:
+            ass (s): an assignments to remove from gradebook
+        """
+        # normalize assignment name
+        ass = self.ass_list.normalize(ass)
+        ass_idx = self.ass_list.index(ass)
+
+        # remove
+        del self.df[ass]
+        del self.df_lateday[ass]
+        self.ass_list.pop(ass_idx)
+        self.points = np.delete(self.points, ass_idx)
