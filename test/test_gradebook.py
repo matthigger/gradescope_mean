@@ -14,3 +14,4 @@ class TestGradebook:
 
         pd.testing.assert_frame_equal(df_exp, gradebook.df)
         assert np.allclose([1, 2, 3, 4], gradebook.points)
+        assert np.allclose([2, 3, 0, 0, 0], gradebook.df_lateday.loc[:, 'hw1'])

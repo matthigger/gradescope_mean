@@ -5,6 +5,7 @@ class AssignmentNotFoundError(NameError):
 class AssignmentList(list):
     """ normalizes assignment names """
     MAX_PTS = ' - max points'
+    LATE = ' - lateness (h:m:s)'
 
     def __init__(self, columns):
         ass_list = [col.replace(self.MAX_PTS, '').lower() for col in columns

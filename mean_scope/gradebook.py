@@ -1,3 +1,5 @@
+from math import ceil
+
 import numpy as np
 import pandas as pd
 
@@ -12,6 +14,8 @@ class Gradebook:
             values are percentage student earned (nan for waived).  contains
             a few metadata columns too (first name, last name, section, id)
 
+        df_lateday (pd.DataFarme): index are email, cols are assignment and
+            values are days each assignment is late
         ass_list (AssignmentList): a list of assignments
         points (np.array): points per assignment (same order as ass_list)
     """
@@ -41,3 +45,13 @@ class Gradebook:
 
             # percentage per assignment
             self.df[ass] = df_scope[ass] / df_scope[ass_max_pt]
+
+        # compute days late
+        def get_days_late(s_hour_min_sec):
+            # grace period of 1 hour built in (we ignore min / sec)
+            return ceil(float(s_hour_min_sec.split(':')[0]) / 24)
+
+        self.df_lateday = pd.DataFrame()
+        for ass in self.ass_list:
+            ass_late = ass + self.ass_list.LATE
+            self.df_lateday[ass] = df_scope[ass_late].map(get_days_late)
