@@ -31,6 +31,7 @@ class Gradebook:
         df_scope.index.map(str.lower)
         df_scope.index.name = df_scope.index.name.lower()
         df_scope.columns = [s.lower() for s in df_scope.columns]
+        df_scope.fillna(0, inplace=True)
 
         # compute percent per assignment & points
         self.ass_list = AssignmentList(df_scope.columns)
@@ -66,4 +67,31 @@ class Gradebook:
 
         for email, ass_many in waive_dict.items():
             for ass in ass_many.split(','):
-                self.df.loc[email, ass] = np.nan
+                self.df.loc[email, self.ass_list.normalize(ass)] = np.nan
+
+    def substitute(self, sub_dict):
+        """ substitutes some assignment percentages (if sub is higher)
+
+        This method is useful when there are multiple versions of a quiz, each
+        with their own gradescope assignment.  It allows you to consolidate
+        them into a single assignment (be sure to exclude the substituted
+        assignments so they don't count)
+
+        Args:
+            sub_dict (dict): keys are target assignment, values are list of
+                all assignments which could be substituted
+        """
+        # we keep all the new, substituted grades in a dict before substituting
+        # (were we to substitute, the order of substitutions could cause issue)
+        new_col_dict = dict()
+        for ass_to, ass_from_list in sub_dict.items():
+            if ass_to not in ass_from_list:
+                # ensure ass_to is in the list of potential substitutes
+                ass_from_list = ass_from_list + [ass_to]
+
+            # get max percentage across all assignments, substitute it
+            new_col_dict[ass_to] = self.df.loc[:, ass_from_list].max(axis=1)
+
+        # substitute
+        for ass_to, s in new_col_dict.items():
+            self.df[ass_to] = s
