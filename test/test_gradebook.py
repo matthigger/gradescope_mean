@@ -43,3 +43,14 @@ class TestGradebook:
         assert ass not in gradebook.df_lateday.columns
         assert ass not in gradebook.ass_list
         assert np.allclose([2, 3, 4], gradebook.points)
+
+    def test_average(self, gradebook):
+        df_grade = gradebook.average()
+        assert np.allclose([.8, .7, .7, .8, .8], df_grade['mean'])
+
+        df_grade = gradebook.average(cat_weight_dict={'hw': 3, 'quiz': 1})
+        assert np.allclose([2 / 3, .5, .5, 2 / 3, 2 / 3], df_grade['mean_hw'])
+        assert np.allclose([1, 1, 1, 1, 1], df_grade['mean_quiz'])
+        assert np.allclose([.75, .625, .625, .75, .75], df_grade['mean'])
+
+        # todo: test after having applied fnc above

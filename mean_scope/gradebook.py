@@ -1,4 +1,3 @@
-from copy import copy
 from math import ceil
 
 import numpy as np
@@ -133,28 +132,38 @@ class Gradebook:
                 assignment weighted by points given on gradescope)
 
         Returns:
-            df_grade (pd.DataFrame): contains self.df_perc with added columns of
-                weighted mean (and mean of any category)
+            df_grade (pd.DataFrame): final grade
         """
         if cat_weight_dict is None:
             # all assignments contain ''
             cat_weight_dict = {'': 1}
 
         # extract percentages as array (a bit quicker)
-        perc_all = self.df_perc.iloc[:, self.META_DATA_COLS:].values
+        perc_all = self.df_perc.values
 
-        df_grade = copy(self.df_perc)
+        df_grade = pd.DataFrame({'mean': 0}, index=self.df_perc.index)
+
+        weight_total = sum(cat_weight_dict.values())
         for cat, weight in cat_weight_dict.items():
             # boolean index into assignments of given category
             cat_bool = np.array([cat in ass for ass in self.ass_list])
             perc_cat = perc_all[:, cat_bool]
-            weight_cat = self.points_cat[:, cat_bool]
+            _points = self.points[cat_bool]
 
             for idx, email in enumerate(self.df_perc.index):
                 # compute mean per student-category
                 s_mean = f'mean_{cat}'
                 _perc = perc_cat[idx, :]
-                _weight = weight_cat[idx, :]
-                df_grade.loc[email, s_mean] = get_mean_drop_low(_perc, _weight)
+                # average across all assignments
+                df_grade.loc[email, s_mean] = get_mean_drop_low(perc=_perc,
+                                                                weight=_points)
+
+            # add category's contribution to overall mean
+            weight = weight / weight_total
+            df_grade['mean'] += df_grade[s_mean] * weight
+
+        if 'mean_' in df_grade.columns:
+            # delete dummy category (equivalent to default behavior)
+            del df_grade['mean_']
 
         return df_grade
