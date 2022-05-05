@@ -1,0 +1,99 @@
+import pathlib
+import shutil
+from datetime import datetime
+
+import yaml
+
+from .gradebook import Gradebook
+
+F_CONFIG_DEFAULT = (pathlib.Path(__file__).parent / 'config.yaml').resolve()
+
+
+class Config:
+    def __init__(self, cat_weight_dict=None, cat_drop_dict=None,
+                 remove_list=tuple(), sub_dict=None, waive_dict=None):
+        self.cat_weight_dict = cat_weight_dict
+        self.cat_drop_dict = cat_drop_dict
+        self.remove_list = remove_list
+        self.sub_dict = sub_dict
+        self.waive_dict = waive_dict
+
+    def __call__(self, f_scope):
+        """ runs a typical processing pipeline given config and f_scop
+
+        Args:
+            f_scope (str): raw gradescope csv
+
+        Returns:
+            gradebook (Gradebook): processed gradebook
+            df_grade_full (pd.DataFrame): full data frame
+        """
+        gradebook = Gradebook(f_scope=f_scope)
+
+        if self.sub_dict is not None:
+            gradebook.substitute(sub_dict=self.sub_dict)
+
+        if self.waive_dict is not None:
+            gradebook.waive(waive_dict=self.waive_dict)
+
+        if self.remove_list is not None:
+            for ass in self.remove_list:
+                gradebook.remove(ass, multi=True)
+
+        df_grade_full = gradebook.average_full(
+            cat_weight_dict=self.cat_weight_dict,
+            cat_drop_dict=self.cat_drop_dict)
+
+        return gradebook, df_grade_full
+
+    @classmethod
+    def from_file(cls, f_config):
+        """ loads config from yaml file
+
+        Args:
+            f_config (str): yaml file
+
+        Returns:
+            config (Config): configuration
+        """
+        # load yaml
+        with open(f_config, 'r') as f:
+            d = yaml.safe_load(f)
+
+        cat_weight_dict = d['category']['weight']
+        cat_drop_n = d['category']['drop low']
+        exclude_list = d['assignments']['exclude']
+        sub_dict = d['assignments']['substitute']
+        waive_dict = d['waive']
+
+        return cls(cat_weight_dict, cat_drop_n, exclude_list, sub_dict,
+                   waive_dict)
+
+    @classmethod
+    def cli_copy_config(cls, folder):
+        """ copies default config file to folder, uses existing local if user wants
+        """
+        # default config location
+        f_config = pathlib.Path(folder) / F_CONFIG_DEFAULT.name
+
+        if f_config.exists():
+            # if config already exists, ask if it should be used
+            print(f'local config exists: {f_config.resolve()}')
+            while True:
+                s = input('use [e]xisting config or create [n]ew config?')
+                if s == 'e':
+                    # use existing config
+                    return cls.from_file(f_config)
+                elif s == 'n':
+                    # create new config
+                    s_now = datetime.now().strftime('_%Y_%b_%d@%H:%M:%S')
+                    f_config = str(f_config).replace('.yaml', f'{s_now}.yaml')
+                    f_config = pathlib.Path(f_config)
+                    break
+                print('invalid input')
+
+        # copy config
+        shutil.copy(F_CONFIG_DEFAULT, f_config)
+        print(f'using config file: {f_config}')
+
+        return cls.from_file(f_config)
