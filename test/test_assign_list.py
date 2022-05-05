@@ -15,11 +15,16 @@ class TestAssignmentList:
         ass_list_exp = ['hw1', 'hw2']
         assert ass_list == ass_list_exp
 
-    def test_normalize(self, ass_list):
-        ass_list.normalize('  hw1  ', max_pts=False) == 'hw1'
+    def test_match(self, ass_list):
+        ass_list.match('  hw1  ', max_pts=False) == 'hw1'
 
-        ass_list.normalize('hw2', max_pts=True) == 'hw2 - max points'
+        ass_list.match('hw2', max_pts=True) == 'hw2 - max points'
 
         with pytest.raises(AssignmentNotFoundError):
-            ass_list.normalize('hw')
-            ass_list.normalize('ghost assignment')
+            ass_list.match('hw')
+            ass_list.match('ghost assignment')
+
+    def test_match(self, ass_list):
+        s_assign_tup_exp = ('hw1', 'hw2')
+        s_assign_tup = ass_list.match_multi(s_assign='hw')
+        assert s_assign_tup == s_assign_tup_exp

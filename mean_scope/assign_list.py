@@ -12,25 +12,33 @@ class AssignmentList(list):
                     if self.MAX_PTS in col]
         super().__init__(sorted(ass_list))
 
-    def normalize(self, s_assign, max_pts=False):
-        """ given string, finds matching assignment in list
+    def match_multi(self, s_assign, max_pts=False):
+        """ given str, finds all matching assignment in list (containing str)
 
         Args:
             s_assign (str): input string to match to assignment
             max_pts (bool): if True, will add MAX_PTS to output
 
         Returns:
-            s_assign (str): assignment, now matched to a unique entry in list
+            s_assign_tup (tup): all matching assignments
         """
         s_assign = s_assign.lower().strip()
-        s_assign_norm_list = [col for col in self if s_assign in col]
-        if len(s_assign_norm_list) != 1:
-            s_error = f'no unique assignment: {s_assign} in {s_assign_norm_list}'
-            raise AssignmentNotFoundError(s_error)
+        s_assign_tup = tuple(col for col in self if s_assign in col)
 
-        s_norm = s_assign_norm_list[0]
         if max_pts:
             # add max points
-            s_norm += self.MAX_PTS
+            s_assign_tup = tuple(s + self.MAX_PTS for s in s_assign_tup)
 
-        return s_norm
+        return s_assign_tup
+
+    def match(self, s_assign, **kwargs):
+        """ finds the unique match to an assignment"""
+        # get all matches
+        s_assign_tup = self.match_multi(s_assign, **kwargs)
+
+        # ensure match is unique
+        if len(s_assign_tup) != 1:
+            s_error = f'no unique assignment: {s_assign} in {s_assign_tup}'
+            raise AssignmentNotFoundError(s_error)
+
+        return s_assign_tup[0]
