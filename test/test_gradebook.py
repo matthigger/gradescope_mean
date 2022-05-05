@@ -65,3 +65,12 @@ class TestGradebook:
 
     def test_average_full(self, gradebook):
         gradebook.average_full()
+
+    def test_prune_email(self, gradebook):
+        email_list = ['last0@nu.edu', 'not-in-list@nu.edu']
+        with pytest.warns():
+            gradebook.prune_email(email_list)
+
+        assert gradebook.df_perc.shape[0] == 1
+        assert gradebook.df_meta.shape[0] == 1
+        assert gradebook.df_lateday.shape[0] == 1

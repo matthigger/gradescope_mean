@@ -1,4 +1,5 @@
 from math import ceil
+from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -102,6 +103,25 @@ class Gradebook:
         # substitute
         for ass_to, s in new_col_dict.items():
             self.df_perc[ass_to] = s
+
+    def prune_email(self, email_list):
+        """ discards rows not in email_list, warns if emails in list not a row
+
+        Args:
+            email_list (list): list of strings
+        """
+        email_list_found = set(self.df_meta.index).intersection(email_list)
+
+        # warn if any emails not found
+        email_list_missing = set(email_list) - email_list_found
+        if email_list_missing:
+            warn(f'emails not found: {email_list_missing}')
+
+        # discard rows not in email_list
+        email_list_found = list(email_list_found)
+        self.df_perc = self.df_perc.loc[email_list_found, :]
+        self.df_meta = self.df_meta.loc[email_list_found, :]
+        self.df_lateday = self.df_lateday.loc[email_list_found, :]
 
     def remove(self, ass, multi=False, skip_match=False):
         """ deletes an assignment
