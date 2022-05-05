@@ -53,4 +53,8 @@ class TestGradebook:
         assert np.allclose([1, 1, 1, 1, 1], df_grade['mean_quiz'])
         assert np.allclose([.75, .625, .625, .75, .75], df_grade['mean'])
 
-        # todo: test after having applied fnc above
+        df_grade = gradebook.average(cat_weight_dict={'hw': 1, 'quiz': 0},
+                                     cat_drop_dict={'hw': 1})
+        assert np.allclose([1, .75, .75, .8, .8], df_grade['mean'])
+
+

@@ -1,5 +1,3 @@
-from heapq import nsmallest
-
 import numpy as np
 
 

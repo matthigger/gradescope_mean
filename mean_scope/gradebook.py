@@ -119,7 +119,7 @@ class Gradebook:
         self.ass_list.pop(ass_idx)
         self.points = np.delete(self.points, ass_idx)
 
-    def average(self, cat_weight_dict=None):
+    def average(self, cat_weight_dict=None, cat_drop_dict=None):
         """ final grades, weighted by points (default) or category weights
 
         Args:
@@ -130,6 +130,11 @@ class Gradebook:
                 each contain exactly one category such that categories
                 partition all assignments.  (Default: no categories given, each
                 assignment weighted by points given on gradescope)
+            cat_drop_dict (dict): keys are categories (matching some key
+                in cat_weight_dict). values are ints, the number of lowest
+                 percentage assignments to drop in each category.  any category
+                 without an entry in cat_drop_dict will not have any lowest
+                 assignments dropped.  (default: no lowest assignments dropped)
 
         Returns:
             df_grade (pd.DataFrame): final grade
@@ -137,6 +142,11 @@ class Gradebook:
         if cat_weight_dict is None:
             # all assignments contain ''
             cat_weight_dict = {'': 1}
+
+        if cat_drop_dict is None:
+            cat_drop_dict = dict()
+        else:
+            assert set(cat_drop_dict.keys()).issubset(cat_weight_dict.keys())
 
         # extract percentages as array (a bit quicker)
         perc_all = self.df_perc.values
@@ -150,13 +160,17 @@ class Gradebook:
             perc_cat = perc_all[:, cat_bool]
             _points = self.points[cat_bool]
 
+            # drop lowest n assignments
+            drop_n = cat_drop_dict.get(cat, 0)
+
             for idx, email in enumerate(self.df_perc.index):
                 # compute mean per student-category
                 s_mean = f'mean_{cat}'
                 _perc = perc_cat[idx, :]
                 # average across all assignments
                 df_grade.loc[email, s_mean] = get_mean_drop_low(perc=_perc,
-                                                                weight=_points)
+                                                                weight=_points,
+                                                                drop_n=drop_n)
 
             # add category's contribution to overall mean
             weight = weight / weight_total
