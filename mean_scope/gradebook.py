@@ -73,7 +73,7 @@ class Gradebook:
 
         for email, ass_many in waive_dict.items():
             for ass in ass_many.split(','):
-                self.df_perc.loc[email, self.ass_list.normalize(ass)] = np.nan
+                self.df_perc.loc[email, self.ass_list.match(ass)] = np.nan
 
     def substitute(self, sub_dict):
         """ substitutes some assignment percentages (if sub is higher)
@@ -103,14 +103,25 @@ class Gradebook:
         for ass_to, s in new_col_dict.items():
             self.df_perc[ass_to] = s
 
-    def remove(self, ass):
+    def remove(self, ass, multi=False, skip_match=False):
         """ deletes an assignment
 
         Args:
             ass (s): an assignments to remove from gradebook
+            multi (bool): if True, allows for multiple assignments to be
+                removed
+            skip_match (bool): when True, assignment name is assumed exact and
+                no matching is done.  (defaults False)
         """
+        if multi:
+            # remove all assignments which match given string
+            for _ass in self.ass_list.match_multi(ass):
+                self.remove(_ass, multi=False, skip_match=True)
+            return
+
         # normalize assignment name
-        ass = self.ass_list.normalize(ass)
+        if not skip_match:
+            ass = self.ass_list.match(ass)
         ass_idx = self.ass_list.index(ass)
 
         # remove

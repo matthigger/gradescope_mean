@@ -35,7 +35,7 @@ class TestGradebook:
         assert np.allclose([1, 1, 1, 1, 1], gradebook.df_perc['hw2'])
         assert np.allclose([1, 0, 0, .5, .5], gradebook.df_perc['hw1'])
 
-    def test_remove(self, gradebook):
+    def test_remove0(self, gradebook):
         ass = 'hw1'
         gradebook.remove(ass)
 
@@ -43,6 +43,12 @@ class TestGradebook:
         assert ass not in gradebook.df_lateday.columns
         assert ass not in gradebook.ass_list
         assert np.allclose([2, 3, 4], gradebook.points)
+
+    def test_remove1(self, gradebook):
+        ass = 'hw'
+        gradebook.remove(ass, multi=True)
+
+        assert np.allclose([4], gradebook.points)
 
     def test_average(self, gradebook):
         df_grade = gradebook.average()
