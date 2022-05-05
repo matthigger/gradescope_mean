@@ -119,6 +119,13 @@ class Gradebook:
         self.ass_list.pop(ass_idx)
         self.points = np.delete(self.points, ass_idx)
 
+    def average_full(self, *args, **kwargs):
+        """ like average, but adds metadata & percentage columns to output
+        """
+        df_grade = self.average(*args, **kwargs)
+
+        return pd.concat((self.df_meta, df_grade, self.df_perc), axis=1)
+
     def average(self, cat_weight_dict=None, cat_drop_dict=None):
         """ final grades, weighted by points (default) or category weights
 

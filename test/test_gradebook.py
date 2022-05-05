@@ -57,4 +57,5 @@ class TestGradebook:
                                      cat_drop_dict={'hw': 1})
         assert np.allclose([1, .75, .75, .8, .8], df_grade['mean'])
 
-
+    def test_average_full(self, gradebook):
+        gradebook.average_full()
