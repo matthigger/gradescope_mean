@@ -1,8 +1,10 @@
+from heapq import nsmallest
+
 import numpy as np
 
 
 def get_mean_drop_low(perc, weight, drop_n=0):
-    """ drops lowest assignment, returns weighted mean
+    """ drops low perc assignment (largest weight if tied), gets weighted mean
 
     we skip any assignments whose perc or weight is nan
 
@@ -28,8 +30,12 @@ def get_mean_drop_low(perc, weight, drop_n=0):
     weight = weight[idx_keep]
     perc = perc[idx_keep]
 
-    # drop a few assignments
-    idx_keep = np.argsort(perc)[drop_n:]
+    # keep assignments in with largest perc (and smaller weight if tie)
+    idx_p_w_iter = enumerate(zip(perc, weight))
+    iter_ass = sorted([(p, -w, idx) for idx, (p, w) in idx_p_w_iter])
+    idx_keep = [idx for _, _, idx in iter_ass[drop_n:]]
+
+    # drop assignments
     weight = weight[idx_keep]
     perc = perc[idx_keep]
 
