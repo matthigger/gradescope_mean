@@ -33,7 +33,7 @@ class Gradebook:
             if df_scope.columns[idx] == 'sid':
                 # student ids are ints, lets not cast to str
                 continue
-            df_scope.iloc[:, idx] = df_scope.iloc[:, idx].map(str.lower)
+            df_scope.iloc[:, idx] = df_scope.iloc[:, idx].astype(str).map(str.lower)
         df_scope.index.map(str.lower)
         df_scope.index.name = df_scope.index.name.lower()
         df_scope.fillna(0, inplace=True)
