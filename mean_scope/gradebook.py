@@ -105,21 +105,44 @@ class Gradebook:
         for ass_to, s in new_col_dict.items():
             self.df_perc[ass_to] = s
 
-    def prune_email(self, email_list):
+    def prune_email(self, email_list, ignore_suffix=True):
         """ discards rows not in email_list, warns if emails in list not a row
 
         Args:
             email_list (list): list of strings
         """
-        email_list_found = set(self.df_meta.index).intersection(email_list)
+        if ignore_suffix:
+            def discard_suffix(email_list):
+                prefix_list = [email.split('@')[0] for email in email_list]
+                prefix_set = set(prefix_list)
+                assert len(prefix_list) == len(set(prefix_list)), \
+                    'non-unique email (before @) found, disable ignore_suffix'
+
+                prefix_email_dict = dict(zip(prefix_list, email_list))
+
+                return prefix_set, prefix_email_dict
+
+            email_target, _ = discard_suffix(email_list)
+            email_scope, prefix_email_dict = discard_suffix(self.df_meta.index)
+        else:
+            email_scope = set(self.df_meta.index)
+            email_target = set(email_list)
 
         # warn if any emails not found
-        email_list_missing = set(email_list) - email_list_found
-        if email_list_missing:
-            warn(f'emails not found: {email_list_missing}')
+        email_target_missing = email_target - email_scope
+        if email_target_missing:
+            s = '\n'.join(email_target_missing)
+            warn(f'email not found in scope:\n{s}')
+
+            email_scope_extra = email_scope - email_target
+            s = '\n'.join(email_scope_extra)
+            warn(f'maybe its one of these?\n{s}')
 
         # discard rows not in email_list
-        email_list_found = list(email_list_found)
+        email_list_found = list(email_scope.intersection(email_target))
+        if ignore_suffix:
+            email_list_found = [prefix_email_dict[prefix]
+                                for prefix in email_list_found]
         self.df_perc = self.df_perc.loc[email_list_found, :]
         self.df_meta = self.df_meta.loc[email_list_found, :]
         self.df_lateday = self.df_lateday.loc[email_list_found, :]

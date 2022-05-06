@@ -111,3 +111,7 @@ class TestGradebook:
         assert gradebook.df_perc.shape[0] == 1
         assert gradebook.df_meta.shape[0] == 1
         assert gradebook.df_lateday.shape[0] == 1
+
+        email_list = ['last0@gmail.com']
+        gradebook.prune_email(email_list, ignore_suffix=True)
+        assert gradebook.df_perc.shape[0] == 1
