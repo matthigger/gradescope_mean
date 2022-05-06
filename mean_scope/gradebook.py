@@ -6,6 +6,7 @@ import pandas as pd
 
 from .assign_list import AssignmentList
 from .get_mean_drop_low import get_mean_drop_low
+from .perc_to_letter import perc_to_letter
 
 
 class Gradebook:
@@ -279,6 +280,9 @@ class Gradebook:
             # add category's contribution to overall mean
             weight = weight / weight_total
             df_grade['mean'] += df_grade[s_mean] * weight
+
+        # compute letter grade
+        df_grade['letter'] = df_grade['mean'].map(perc_to_letter)
 
         if 'mean_' in df_grade.columns:
             # delete dummy category (equivalent to default behavior)

@@ -81,6 +81,7 @@ class TestGradebook:
     def test_average(self, gradebook):
         df_grade = gradebook.average()
         np.testing.assert_allclose([.8, .7, .7, .8, .8], df_grade['mean'])
+        assert ['B-', 'C-', 'C-', 'B-', 'B-'] == df_grade['letter'].tolist()
 
         df_grade = gradebook.average(cat_weight_dict={'hw': 3, 'quiz': 1})
         np.testing.assert_allclose([2 / 3, .5, .5, 2 / 3, 2 / 3],
