@@ -150,6 +150,54 @@ class Gradebook:
         self.ass_list.pop(ass_idx)
         self.points = np.delete(self.points, ass_idx)
 
+    def get_late_penalty(self, cat, penalty_per_day, excuse_day=0,
+                         excuse_day_adjust=None):
+        """ computes modifier to category mean to incorporate late penalty
+
+        Let late_day be the total number of days late (across all hws of one
+        student).  then the penalty applied is:
+
+            -penalty_per_day * max(late_day - excuse_day, 0)
+
+        to an average assignment score.  For example, when penalty_per_day=.15
+        then every unexcused late day effectively negates %15 of a single hw.
+        (since all hws needn't have same weight, penalty applied to average hw)
+
+        Args:
+            cat (str): category of assignment to apply penalty to
+            penalty_per_day (float): percentage of hw penalty per unexcused day
+                late.  positive values will lower grades.
+            excuse_day (int): number of excused late days each student has (can
+                be used on any assignment).  excuse_day_adjust allows this
+                default to be modified per student
+            excuse_day_adjust (dict): keys are student emails, values are the
+                excuse_day value to be used for corresponding student.
+
+        Returns:
+            s_penalty (pd.Series): index is email.  values are adjustments
+        """
+        if penalty_per_day < 0:
+            raise AttributeError(
+                'penalty_per_day should be positive to lower credit when late')
+
+        # get late days across category
+        ass_cat_list = self.ass_list.match_multi(s_assign=cat)
+        s_late_day = self.df_lateday.loc[:, ass_cat_list].sum(axis=1)
+
+        # get number of excuse days per student
+        s_excuse_day = pd.Series(index=s_late_day.index, data=excuse_day)
+        if excuse_day_adjust is not None:
+            s_excuse_day.update(excuse_day_adjust)
+
+        # get unexcused late days per student
+        s_unexcuse_late_day = s_late_day - s_excuse_day
+        s_unexcuse_late_day[s_unexcuse_late_day < 0] = 0
+
+        # get penalty
+        s_penalty = - penalty_per_day * s_unexcuse_late_day / len(ass_cat_list)
+
+        return s_penalty
+
     def average_full(self, *args, **kwargs):
         """ like average, but adds metadata & percentage columns to output
         """
@@ -157,7 +205,8 @@ class Gradebook:
 
         return pd.concat((self.df_meta, df_grade, self.df_perc), axis=1)
 
-    def average(self, cat_weight_dict=None, cat_drop_dict=None):
+    def average(self, cat_weight_dict=None, cat_drop_dict=None,
+                cat_late_dict=None):
         """ final grades, weighted by points (default) or category weights
 
         Args:
@@ -173,6 +222,9 @@ class Gradebook:
                  percentage assignments to drop in each category.  any category
                  without an entry in cat_drop_dict will not have any lowest
                  assignments dropped.  (default: no lowest assignments dropped)
+            cat_late_dict (dict): keys are assignment categories.  values are
+                dictionaries unpacked as arguments into
+                Gradebook.get_late_penalty()
 
         Returns:
             df_grade (pd.DataFrame): final grade
@@ -181,10 +233,15 @@ class Gradebook:
             # all assignments contain ''
             cat_weight_dict = {'': 1}
 
+        if cat_late_dict is None:
+            cat_late_dict = dict()
+
         if cat_drop_dict is None:
             cat_drop_dict = dict()
         else:
             assert set(cat_drop_dict.keys()).issubset(cat_weight_dict.keys())
+
+        # todo: assert categories partition assignments
 
         # extract percentages as array (a bit quicker)
         perc_all = self.df_perc.values
@@ -201,14 +258,23 @@ class Gradebook:
             # drop lowest n assignments
             drop_n = cat_drop_dict.get(cat, 0)
 
+            s_mean = f'mean_{cat}'
             for idx, email in enumerate(self.df_perc.index):
                 # compute mean per student-category
-                s_mean = f'mean_{cat}'
                 _perc = perc_cat[idx, :]
+
                 # average across all assignments
                 df_grade.loc[email, s_mean] = get_mean_drop_low(perc=_perc,
                                                                 weight=_points,
                                                                 drop_n=drop_n)
+
+            if cat in cat_late_dict:
+                # apply late penalty
+                kwargs = cat_late_dict[cat]
+                df_grade[s_mean] += self.get_late_penalty(cat=cat, **kwargs)
+
+                # ensure penalty doesn't drop mean below 0
+                df_grade[s_mean] = df_grade[s_mean].map(lambda x: max(x, 0))
 
             # add category's contribution to overall mean
             weight = weight / weight_total

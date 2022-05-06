@@ -12,13 +12,14 @@ F_CONFIG_DEFAULT = (pathlib.Path(__file__).parent / 'config.yaml').resolve()
 class Config:
     def __init__(self, cat_weight_dict=None, cat_drop_dict=None,
                  remove_list=tuple(), sub_dict=None, waive_dict=None,
-                 email_list=None):
+                 email_list=None, cat_late_dict=None):
         self.cat_weight_dict = cat_weight_dict
         self.cat_drop_dict = cat_drop_dict
         self.remove_list = remove_list
         self.sub_dict = sub_dict
         self.waive_dict = waive_dict
         self.email_list = email_list
+        self.cat_late_dict = cat_late_dict
 
     def __call__(self, f_scope):
         """ runs a typical processing pipeline given config and f_scop
@@ -47,7 +48,8 @@ class Config:
 
         df_grade_full = gradebook.average_full(
             cat_weight_dict=self.cat_weight_dict,
-            cat_drop_dict=self.cat_drop_dict)
+            cat_drop_dict=self.cat_drop_dict,
+            cat_late_dict=self.cat_late_dict)
 
         return gradebook, df_grade_full
 
@@ -67,13 +69,14 @@ class Config:
 
         cat_weight_dict = d['category']['weight']
         cat_drop_n = d['category']['drop low']
+        cat_late_dict = d['category']['late_penalty']
         exclude_list = d['assignments']['exclude']
         sub_dict = d['assignments']['substitute']
         waive_dict = d['waive']
         email_list = d['email_list']
 
         return cls(cat_weight_dict, cat_drop_n, exclude_list, sub_dict,
-                   waive_dict, email_list)
+                   waive_dict, email_list, cat_late_dict)
 
     @classmethod
     def cli_copy_config(cls, folder):
