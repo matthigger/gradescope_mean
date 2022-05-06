@@ -8,6 +8,7 @@ setup(name='mean_scope',
       install_requires=[
           'numpy',
           'pandas',
+          'plotly',
           'pytest',
-          'pyyaml']
+          'pyyaml',]
       )

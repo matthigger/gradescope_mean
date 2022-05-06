@@ -2,3 +2,4 @@
 /.venv/
 /tmp*
 *.pyc
+/mean_scope.egg-info/
