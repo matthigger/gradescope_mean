@@ -11,9 +11,11 @@ def gradebook():
 class TestGradebook:
     def test_init(self, gradebook):
         df_perc_exp = pd.read_csv('df_perc_exp.csv', index_col='email')
-        df_meta_exp = pd.read_csv('df_meta_exp.csv', index_col='email')
+        df_meta_exp = pd.read_csv('df_meta_exp.csv', index_col='email',
+                                  converters={'sid': str, 'crn': str})
 
-        pd.testing.assert_frame_equal(df_meta_exp, gradebook.df_meta)
+        pd.testing.assert_frame_equal(df_meta_exp, gradebook.df_meta,
+                                      check_dtype=False)
         pd.testing.assert_frame_equal(df_perc_exp, gradebook.df_perc)
         np.testing.assert_allclose([1, 2, 3, 4], gradebook.points)
         np.testing.assert_allclose([0, 1, 2, 3, 4],

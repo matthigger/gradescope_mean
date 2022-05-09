@@ -41,6 +41,17 @@ class Gradebook:
 
         # store meta data
         self.df_meta = df_scope.iloc[:, :self.META_DATA_COLS]
+        self.df_meta['crn'] = \
+            self.df_meta['section_name'].map(lambda x: x.split('-')[1])
+
+        def normalize_sid(x, nuid_width=9):
+            """ normalizes student id """
+            x = str(x).lower()
+            if x.endswith('s'):
+                x = x[:-1]
+            return x.zfill(nuid_width)
+        
+        self.df_meta['sid'] = self.df_meta['sid'].map(normalize_sid)
 
         # compute percent per assignment & points
         self.ass_list = AssignmentList(df_scope.columns)
