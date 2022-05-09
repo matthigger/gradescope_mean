@@ -15,7 +15,8 @@ parser.add_argument('f_scope', type=str,
 parser.add_argument('--config', dest='f_config', action='store',
                     default=None, help='yaml configuration (see todo: link)')
 parser.add_argument('--plot', dest='plot_flag', action='store',
-                    default=True, help='toggles histogram plots')
+                    default=True, help='toggles histogram plot per '
+                                       'assignment category')
 
 # load gradescope data
 args = parser.parse_args()
@@ -43,11 +44,14 @@ if args.plot_flag:
     # make histogram subplots
     fig = make_subplots(cols=len(feat_list), rows=1, subplot_titles=feat_list)
     for row_idx, feat in enumerate(feat_list):
-        trace = go.Histogram(y=df_grade_full[feat], name='feat', ybins=dict(start=.5, end=1, size=.025), opacity=0.75)
+        trace = go.Histogram(y=df_grade_full[feat], name='feat',
+                             ybins=dict(start=.5, end=1, size=.025),
+                             opacity=0.75)
         fig.append_trace(trace, col=row_idx + 1, row=1)
 
         mean = df_grade_full[feat].mean()
-        fig.add_hline(y=mean, annotation_text=f'mean: {mean:.3f}', col=row_idx + 1, row=1)
+        fig.add_hline(y=mean, annotation_text=f'mean: {mean:.3f}',
+                      col=row_idx + 1, row=1)
     fig.update_layout(showlegend=False)
     f_html = folder / f'hist.html'
     fig.write_html(str(f_html))
