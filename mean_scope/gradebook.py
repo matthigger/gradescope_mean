@@ -33,7 +33,8 @@ class Gradebook:
             if df_scope.columns[idx] == 'sid':
                 # student ids are ints, lets not cast to str
                 continue
-            df_scope.iloc[:, idx] = df_scope.iloc[:, idx].astype(str).map(str.lower)
+            df_scope.iloc[:, idx] = df_scope.iloc[:, idx].astype(str).map(
+                str.lower)
         df_scope.index.map(str.lower)
         df_scope.index.name = df_scope.index.name.lower()
         df_scope.fillna(0, inplace=True)
@@ -265,7 +266,22 @@ class Gradebook:
         else:
             assert set(cat_drop_dict.keys()).issubset(cat_weight_dict.keys())
 
-        # todo: assert categories partition assignments
+        # ensure that categories partition assignments (warn if they don't)
+        cat_bool_dict = {cat: np.array([cat in ass for ass in self.ass_list])
+                         for cat in cat_weight_dict.keys()}
+        cat_bool_sum = sum(cat_bool_dict.values())
+        if not (cat_bool_sum == 1).all():
+            # assignment not included in any category
+            ass_not_include = np.array(self.ass_list)[cat_bool_sum < 1]
+            if ass_not_include.size:
+                s = ', '.join(sorted(ass_not_include))
+                warn(f'assignment not in any category: {s}')
+
+            # assignment included in more than 1 category
+            ass_over_include = np.array(self.ass_list)[cat_bool_sum > 1]
+            if ass_over_include.size:
+                s = ', '.join(sorted(ass_over_include))
+                warn(f'assignment in multiple categories: {s}')
 
         # extract percentages as array (a bit quicker)
         perc_all = self.df_perc.values
@@ -273,9 +289,7 @@ class Gradebook:
         df_grade = pd.DataFrame({'mean': 0}, index=self.df_perc.index)
 
         weight_total = sum(cat_weight_dict.values())
-        for cat, weight in cat_weight_dict.items():
-            # boolean index into assignments of given category
-            cat_bool = np.array([cat in ass for ass in self.ass_list])
+        for cat, cat_bool in cat_bool_dict.items():
             perc_cat = perc_all[:, cat_bool]
             _points = self.points[cat_bool]
 
@@ -301,6 +315,7 @@ class Gradebook:
                 df_grade[s_mean] = df_grade[s_mean].map(lambda x: max(x, 0))
 
             # add category's contribution to overall mean
+            weight = cat_weight_dict[cat]
             weight = weight / weight_total
             df_grade['mean'] += df_grade[s_mean] * weight
 

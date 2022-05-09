@@ -100,6 +100,14 @@ class TestGradebook:
         np.testing.assert_allclose([2 / 3, 1 / 6, 0, 0, 0],
                                    df_grade['mean_hw'])
 
+        with pytest.warns(UserWarning):
+            # warns other assignments not included
+            gradebook.average(cat_weight_dict={'hw1': 1})
+
+        with pytest.warns(UserWarning):
+            # warns hw1 in two categories
+            gradebook.average(cat_weight_dict={'hw': 1, 'hw1': 1, 'quiz': 1})
+
     def test_average_full(self, gradebook):
         gradebook.average_full()
 
