@@ -1,6 +1,6 @@
 import pytest
 
-from mean_scope.assign_list import *
+from gradescope_mean.assign_list import *
 
 columns = ['skip me', 'HW1 - max points', 'hw1', 'HW2 - max points', 'hw2']
 

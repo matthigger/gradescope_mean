@@ -1,4 +1,4 @@
-from mean_scope.perc_to_letter import *
+from gradescope_mean.perc_to_letter import *
 
 
 def test_val_to_letter():

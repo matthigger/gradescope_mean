@@ -1,4 +1,4 @@
-from mean_scope.config import *
+from gradescope_mean.config import *
 
 
 def test_config():

@@ -1,6 +1,6 @@
 import pytest
 
-from mean_scope.gradebook import *
+from gradescope_mean.gradebook import *
 
 
 @pytest.fixture

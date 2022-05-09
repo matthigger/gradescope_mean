@@ -1,7 +1,7 @@
 from collections import namedtuple
 from math import isclose
 
-from mean_scope.get_mean_drop_low import *
+from gradescope_mean.get_mean_drop_low import *
 
 TestCase = namedtuple('TestCase', ['perc', 'weight', 'drop_n', 'mean_exp'])
 
