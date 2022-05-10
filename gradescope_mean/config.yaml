@@ -1,10 +1,11 @@
 category:
   weight: null
   drop low: null
+  late_penalty: null
 
 assignments:
   exclude: null
-  alias: null
+  substitute: null
 
 waive: null
 
