@@ -83,10 +83,9 @@ By [default](../gradescope_mean/config.yaml) no assignments are substituted.
         student1@northeastern.edu: hw1, hw2, hw3
 
 Waives assignments for individual students.  For these students, the 
-final grade is computed as if this work was never assigned.  By [default](..
-/gradescope_mean/config.yaml) no assignments are waived.
+final grade is computed as if this work was never assigned.  By [default](../gradescope_mean/config.yaml) no assignments are waived.
 
-## Email_list
+# Email_list
 
     email_list:
         - name0@northeastern.edu
