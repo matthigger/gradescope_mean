@@ -5,6 +5,7 @@ setup(name='gradescope_mean',
       author='Matt Higger',
       author_email='matt.higger@gmail.com',
       packages=find_packages(),
+      package_data={'gradescope_mean': ['config.yaml']},
       install_requires=[
           'numpy',
           'pandas',
