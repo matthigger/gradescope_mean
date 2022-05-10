@@ -54,4 +54,4 @@ if args.plot_flag:
                       col=row_idx + 1, row=1)
     fig.update_layout(showlegend=False)
     f_html = folder / f'hist.html'
-    fig.write_html(str(f_html))
+    fig.write_html(str(f_html), include_plotlyjs='cdn')
