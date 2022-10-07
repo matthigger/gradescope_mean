@@ -1,8 +1,7 @@
 import pathlib
 import shutil
-from datetime import datetime
-
 import yaml
+from datetime import datetime
 
 from .gradebook import Gradebook
 
@@ -39,12 +38,12 @@ class Config:
         if self.sub_dict is not None:
             gradebook.substitute(sub_dict=self.sub_dict)
 
-        if self.waive_dict is not None:
-            gradebook.waive(waive_dict=self.waive_dict)
-
         if self.remove_list is not None:
             for ass in self.remove_list:
                 gradebook.remove(ass, multi=True)
+
+        if self.waive_dict is not None:
+            gradebook.waive(waive_dict=self.waive_dict)
 
         df_grade_full = gradebook.average_full(
             cat_weight_dict=self.cat_weight_dict,
