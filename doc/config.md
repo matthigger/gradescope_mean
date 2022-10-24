@@ -60,6 +60,15 @@ By [default](../gradescope_mean/config.yaml) no late penalty is applied to any c
 
 Excludes any assignment which includes the string `_dummy_quiz` or `quiz1_01` (case-insensitive comparison).  By [default](../gradescope_mean/config.yaml) no assignment is excluded.
 
+exclude_complete_thresh
+
+## Assignments/exclude_complete_thresh
+
+    assignments:
+        exclude_complete_thresh: .6
+
+Excludes an assignment when less than 60% of students received a zero score on the assignment (no submissions count as a zero score here).  By [default](../gradescope_mean/config.yaml) no assignment is excluded.
+
 ## Assignments/Substitute
     assignments:
         substitute:

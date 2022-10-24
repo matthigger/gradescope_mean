@@ -4,6 +4,7 @@ category:
   late_penalty: null
 
 assignments:
+  exclude_complete_thresh: null
   exclude: null
   substitute: null
 

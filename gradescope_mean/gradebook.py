@@ -4,7 +4,7 @@ from warnings import warn
 import numpy as np
 import pandas as pd
 
-from .assign_list import AssignmentList
+from .assign_list import AssignmentList, AssignmentNotFoundError
 from .get_mean_drop_low import get_mean_drop_low
 from .perc_to_letter import perc_to_letter
 
@@ -76,7 +76,12 @@ class Gradebook:
 
         for email, ass_many in waive_dict.items():
             for ass in ass_many.split(','):
-                self.df_perc.loc[email, self.ass_list.match(ass)] = np.nan
+                try:
+                    _ass = self.ass_list.match(ass)
+                except AssignmentNotFoundError:
+                    msg = f'waive-fail: not found "{ass}" for {email}'
+                    print(msg)
+                self.df_perc.loc[email, _ass] = np.nan
 
     def substitute(self, sub_dict):
         """ substitutes some assignment percentages (if sub is higher)
@@ -147,6 +152,24 @@ class Gradebook:
         self.df_perc = self.df_perc.loc[email_list_found, :]
         self.df_meta = self.df_meta.loc[email_list_found, :]
         self.df_lateday = self.df_lateday.loc[email_list_found, :]
+
+    def remove_thresh(self, min_complete_thresh=.9):
+        """ removes assignments which not enough students have submitted
+
+        Args:
+            min_complete_thresh (float): below this completion threshold
+                an assignment will be excluded (msg printed to user).  0 and
+                nan both count as not completed
+        """
+        # find percent missing per assignment per ass, rm if above thresh
+        s_miss_perc = (self.df_perc.fillna(0) == 0).mean(axis=0)
+        for ass, miss_perc in s_miss_perc.sort_values(ascending=False).items():
+            if miss_perc > (1 - min_complete_thresh):
+                msg = f'removed: {miss_perc * 100:.0f}% missing {ass}'
+                self.remove(ass, skip_match=True)
+            elif miss_perc > 0:
+                msg = f'   kept: {miss_perc * 100:.0f}% missing: {ass}'
+            print(msg)
 
     def remove(self, ass, multi=False, skip_match=False):
         """ deletes an assignment
@@ -306,7 +329,7 @@ class Gradebook:
                                                                 weight=_points,
                                                                 drop_n=drop_n)
 
-            if cat in cat_late_dict:
+            if cat in cat_late_dict.items():
                 # apply late penalty
                 kwargs = cat_late_dict[cat]
                 df_grade[s_mean] += self.get_late_penalty(cat=cat, **kwargs)
