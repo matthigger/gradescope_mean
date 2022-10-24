@@ -162,13 +162,13 @@ class Gradebook:
                 nan both count as not completed
         """
         # find percent missing per assignment per ass, rm if above thresh
-        s_miss_perc = (self.df_perc.fillna(0) == 0).mean(axis=0)
-        for ass, miss_perc in s_miss_perc.sort_values(ascending=False).items():
-            if miss_perc > (1 - min_complete_thresh):
-                msg = f'removed: {miss_perc * 100:.0f}% missing {ass}'
+        s_complete_perc = 1 - (self.df_perc.fillna(0) == 0).mean(axis=0)
+        for ass, comp_perc in s_complete_perc.sort_values().items():
+            if comp_perc < min_complete_thresh:
+                msg = f'removed: {comp_perc * 100:.0f}% complete {ass}'
                 self.remove(ass, skip_match=True)
-            elif miss_perc > 0:
-                msg = f'   kept: {miss_perc * 100:.0f}% missing: {ass}'
+            elif comp_perc < 1:
+                msg = f'   kept: {comp_perc * 100:.0f}% complete {ass}'
             print(msg)
 
     def remove(self, ass, multi=False, skip_match=False):
@@ -329,7 +329,7 @@ class Gradebook:
                                                                 weight=_points,
                                                                 drop_n=drop_n)
 
-            if cat in cat_late_dict.items():
+            if cat in cat_late_dict:
                 # apply late penalty
                 kwargs = cat_late_dict[cat]
                 df_grade[s_mean] += self.get_late_penalty(cat=cat, **kwargs)

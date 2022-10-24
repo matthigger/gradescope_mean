@@ -67,7 +67,8 @@ exclude_complete_thresh
     assignments:
         exclude_complete_thresh: .6
 
-Excludes an assignment when less than 60% of students received a zero score on the assignment (no submissions count as a zero score here).  By [default](../gradescope_mean/config.yaml) no assignment is excluded.
+Excludes an assignment when less than 60% of students received a non-zero score on the assignment (no submissions count as a zero score here).  Note this operation applied after other exclusions and substitutions (see above and below).  
+By [default](../gradescope_mean/config.yaml) no assignment is excluded.
 
 ## Assignments/Substitute
     assignments:

@@ -43,11 +43,11 @@ class Config:
             for ass in self.remove_list:
                 gradebook.remove(ass, multi=True)
 
-        if self.waive_dict is not None:
-            gradebook.waive(waive_dict=self.waive_dict)
-
         if self.exclude_complete_thresh is not None:
             gradebook.remove_thresh(min_complete_thresh=self.exclude_complete_thresh)
+
+        if self.waive_dict is not None:
+            gradebook.waive(waive_dict=self.waive_dict)
 
         df_grade_full = gradebook.average_full(
             cat_weight_dict=self.cat_weight_dict,
