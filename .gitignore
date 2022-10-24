@@ -3,3 +3,4 @@
 /tmp*
 *.pyc
 /gradescope_mean.egg-info/
+/dist/

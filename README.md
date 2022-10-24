@@ -24,7 +24,7 @@ You can also view histograms ([hist.html](doc/hist.html)) per assignment categor
 
 # Installation 
 
-    pip install git+https://github.com/matthigger/gradescope_mean@release
+    pip3 install gradescope-mean
 
 # Usage
 
