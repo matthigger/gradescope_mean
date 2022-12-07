@@ -42,6 +42,10 @@ class Gradebook:
         # store meta data
         self.df_meta = df_scope.iloc[:, :self.META_DATA_COLS]
 
+        # add the "no S" student id (helpful for banner upload)
+        self.df_meta['sid (banner)'] = \
+            self.df_meta['sid'].map(lambda x: x.strip('S'))
+
         # compute percent per assignment & points
         self.ass_list = AssignmentList(df_scope.columns)
         self.df_perc = pd.DataFrame()

@@ -24,6 +24,8 @@ You can also view histograms ([hist.html](doc/hist.html)) per assignment categor
 
 <img alt="histogram per category" src="doc/hist.png" width="800px"/>
 
+Its also not too painful to [upload to Banner](doc/banner_upload.md) from the given output (honestly, the documentation here is more valuable than the software for this)
+
 # Installation 
 
     pip3 install gradescope-mean
