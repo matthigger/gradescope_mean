@@ -254,7 +254,7 @@ class Gradebook:
         return pd.concat((self.df_meta, df_grade, self.df_perc), axis=1)
 
     def average(self, cat_weight_dict=None, cat_drop_dict=None,
-                cat_late_dict=None):
+                cat_late_dict=None, grade_thresh=None):
         """ final grades, weighted by points (default) or category weights
 
         Args:
@@ -343,7 +343,10 @@ class Gradebook:
             df_grade['mean'] += df_grade[s_mean] * weight
 
         # compute letter grade
-        df_grade['letter'] = df_grade['mean'].map(perc_to_letter)
+        def _perc_to_letter(perc):
+            return perc_to_letter(perc, grade_thresh=grade_thresh)
+
+        df_grade['letter'] = df_grade['mean'].map(_perc_to_letter)
 
         if 'mean_' in df_grade.columns:
             # delete dummy category (equivalent to default behavior)
