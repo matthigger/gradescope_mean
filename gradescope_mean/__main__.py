@@ -40,3 +40,9 @@ if args.plot_flag:
                                     cat_weight_dict=config.cat_weight_dict)
     f_html = folder / f'hist.html'
     fig.write_html(str(f_html), include_plotlyjs='cdn')
+
+# canvas
+if args.f_canvas is not None:
+    gradescope_mean.canvas_merge(f_canvas=args.f_canvas,
+                                 df_grade_full=df_grade_full,
+                                 meta_col_list=gradebook.df_meta.columns)
