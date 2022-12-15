@@ -1,0 +1,31 @@
+[project]
+name = "gradescope_auto_py"
+version = "0.0.3"
+authors = [
+    { name = "Matt Higger", email = "matt.higger@gmail.com" },
+]
+description = "utility to average gradescope csv output to final grades"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    'numpy',
+    'pandas',
+    'plotly',
+    'pytest',
+    'pyyaml'
+]
+
+[tool.setuptools.package-data]
+gradescope_auto_py = ["config.yaml"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project.urls]
+"Homepage" = "https://github.com/matthigger/gradescope_mean"
