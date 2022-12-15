@@ -42,6 +42,10 @@ class Gradebook:
         # store meta data
         self.df_meta = df_scope.iloc[:, :self.META_DATA_COLS]
 
+        # add the "no S" student id (helpful for banner upload)
+        self.df_meta['sid (banner)'] = \
+            self.df_meta['sid'].map(lambda x: str(x).strip('S'))
+
         # compute percent per assignment & points
         self.ass_list = AssignmentList(df_scope.columns)
         self.df_perc = pd.DataFrame()
@@ -254,7 +258,7 @@ class Gradebook:
         return pd.concat((self.df_meta, df_grade, self.df_perc), axis=1)
 
     def average(self, cat_weight_dict=None, cat_drop_dict=None,
-                cat_late_dict=None):
+                cat_late_dict=None, grade_thresh=None):
         """ final grades, weighted by points (default) or category weights
 
         Args:
@@ -343,7 +347,10 @@ class Gradebook:
             df_grade['mean'] += df_grade[s_mean] * weight
 
         # compute letter grade
-        df_grade['letter'] = df_grade['mean'].map(perc_to_letter)
+        def _perc_to_letter(perc):
+            return perc_to_letter(perc, grade_thresh=grade_thresh)
+
+        df_grade['letter'] = df_grade['mean'].map(_perc_to_letter)
 
         if 'mean_' in df_grade.columns:
             # delete dummy category (equivalent to default behavior)

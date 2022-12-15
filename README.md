@@ -7,11 +7,13 @@ A utility which computes final grades (example: [grade_full.csv](doc/grade_full.
   - e.g. 2 lowest HW assignments, per student, are waived
 - apply a late penalty (per day) that assignments are submitted beyond 
   deadline
-  - e.g. HW is penalized 15% of max score per day late
+  - e.g. HW is penalized 15% of average weighted assignment in category
+  - also includes support for not penalizing the first N "late days" per assignment category (e.g. each student may use up to 3 "late days" across all HWs without penalty)
 - waive assignments per individual student
 - validate gradescope student list by passing an email list of active students
   - e.g. one student has a low average grade, have they dropped the course?
-- exclude any assignments which shouldn't be included in final grade
+- exclude assignments which shouldn't be included in final grade
+  - assignments automatically excluded if they don't have some minimum completion threshold
 - substitute one assignment in place of another (where substitute has 
   higher percentage)
   - e.g. to "merge" two versions of the quiz with their own unique gradescope assignment
@@ -22,9 +24,11 @@ You can also view histograms ([hist.html](doc/hist.html)) per assignment categor
 
 <img alt="histogram per category" src="doc/hist.png" width="800px"/>
 
+You can upload to [Northeastern's Banner](doc/upload_banner.md) or [Canvas](doc/upload_canvas.md) from the given `grade_full.csv`
+
 # Installation 
 
-    pip install git+https://github.com/matthigger/gradescope_mean@release
+    pip3 install gradescope-mean
 
 # Usage
 

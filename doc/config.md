@@ -95,6 +95,24 @@ By [default](../gradescope_mean/config.yaml) no assignments are substituted.
 Waives assignments for individual students.  For these students, the 
 final grade is computed as if this work was never assigned.  By [default](../gradescope_mean/config.yaml) no assignments are waived.
 
+# Grade Thresh
+
+    grade_thresh:
+      .93: A
+      .90: A-
+      .87: B+
+      .83: B
+      .80: B-
+      .77: C+
+      .73: C
+      .70: C-
+      .67: D+
+      .63: D
+      .60: D-
+      0: E
+
+The lowest threshold (inclusive) to achieve a given grade.  Modify here if you'd like to "round" your student's final grades.
+
 # Email_list
 
     email_list:
