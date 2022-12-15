@@ -44,7 +44,7 @@ class Gradebook:
 
         # add the "no S" student id (helpful for banner upload)
         self.df_meta['sid (banner)'] = \
-            self.df_meta['sid'].map(lambda x: x.strip('S'))
+            self.df_meta['sid'].map(lambda x: str(x).strip('S'))
 
         # compute percent per assignment & points
         self.ass_list = AssignmentList(df_scope.columns)
