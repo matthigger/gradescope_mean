@@ -82,10 +82,10 @@ class Gradebook:
             for ass in ass_many.split(','):
                 try:
                     _ass = self.ass_list.match(ass)
+                    self.df_perc.loc[email, _ass] = np.nan
                 except AssignmentNotFoundError:
                     msg = f'waive-fail: not found "{ass}" for {email}'
-                    print(msg)
-                self.df_perc.loc[email, _ass] = np.nan
+                    warn(msg)
 
     def substitute(self, sub_dict):
         """ substitutes some assignment percentages (if sub is higher)
