@@ -4,3 +4,5 @@
 *.pyc
 /gradescope_mean.egg-info/
 /dist/
+/.pytest_cache/
+/gradescope_auto_py.egg-info/

@@ -1,6 +1,6 @@
 [project]
-name = "gradescope_auto_py"
-version = "0.0.3"
+name = "gradescope_mean"
+version = "0.0.4"
 authors = [
     { name = "Matt Higger", email = "matt.higger@gmail.com" },
 ]
