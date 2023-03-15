@@ -13,8 +13,8 @@ class Config:
     def __init__(self, cat_weight_dict=None, cat_drop_dict=None,
                  remove_list=tuple(), sub_dict=None, waive_dict=None,
                  email_list=None, cat_late_dict=None,
-                 exclude_complete_thresh=None,
-                 grade_thresh=None):
+                 exclude_complete_thresh=None, grade_thresh=None,
+                 late_waive_dict=None):
         self.cat_weight_dict = cat_weight_dict
         self.cat_drop_dict = cat_drop_dict
         self.remove_list = remove_list
@@ -22,6 +22,7 @@ class Config:
         self.waive_dict = waive_dict
         self.email_list = email_list
         self.cat_late_dict = cat_late_dict
+        self.late_waive_dict = late_waive_dict
         self.exclude_complete_thresh = exclude_complete_thresh
         self.grade_thresh = grade_thresh
 
@@ -58,7 +59,8 @@ class Config:
             cat_weight_dict=self.cat_weight_dict,
             cat_drop_dict=self.cat_drop_dict,
             cat_late_dict=self.cat_late_dict,
-            grade_thresh=self.grade_thresh)
+            grade_thresh=self.grade_thresh,
+            late_waive_dict=self.late_waive_dict)
 
         return gradebook, df_grade_full
 

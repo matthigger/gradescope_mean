@@ -25,7 +25,7 @@ class Gradebook:
     META_DATA_COLS = 4
 
     def __init__(self, f_scope):
-        df_scope = pd.read_csv(f_scope, index_col='Email')
+        df_scope = pd.read_csv(str(f_scope), index_col='Email')
 
         # groom input data
         df_scope.columns = [s.lower() for s in df_scope.columns]
@@ -83,6 +83,7 @@ class Gradebook:
                 try:
                     _ass = self.ass_list.match(ass)
                     self.df_perc.loc[email, _ass] = np.nan
+                    self.df_lateday.loc[email, _ass] = np.nan
                 except AssignmentNotFoundError:
                     msg = f'waive-fail: not found "{ass}" for {email}'
                     warn(msg)
@@ -203,7 +204,7 @@ class Gradebook:
         self.points = np.delete(self.points, ass_idx)
 
     def get_late_penalty(self, cat, penalty_per_day, excuse_day=0,
-                         excuse_day_adjust=None):
+                         excuse_day_adjust=None, waive_dict=None):
         """ computes modifier to category mean to incorporate late penalty
 
         Let late_day be the total number of days late (across all hws of one
@@ -223,7 +224,9 @@ class Gradebook:
                 be used on any assignment).  excuse_day_adjust allows this
                 default to be modified per student
             excuse_day_adjust (dict): keys are student emails, values are the
-                excuse_day value to be used for corresponding student.
+                excuse_day value to be used for corresponding student
+            waive_dict (dict): keys are student emails, values are lists
+                of assignments whose late days are to be waived
 
         Returns:
             s_penalty (pd.Series): index is email.  values are adjustments
@@ -232,11 +235,21 @@ class Gradebook:
             raise AttributeError(
                 'penalty_per_day should be positive to lower credit when late')
 
+        if waive_dict is None:
+            waive_dict = dict()
+
         # get late days across category
         ass_cat_list = self.ass_list.match_multi(s_assign=cat)
-        s_late_day = self.df_lateday.loc[:, ass_cat_list].sum(axis=1)
+        df_late = self.df_lateday.loc[:, ass_cat_list].copy()
+
+        # waive late days per email / assignment
+        for email, ass in waive_dict.items():
+            ass = self.ass_list.match(ass)
+            if ass in df_late.columns:
+                df_late.loc[email, ass] = np.nan
 
         # get number of excuse days per student
+        s_late_day = df_late.sum(axis=1, skipna=True)
         s_excuse_day = pd.Series(index=s_late_day.index, data=excuse_day)
         if excuse_day_adjust is not None:
             s_excuse_day.update(excuse_day_adjust)
@@ -258,7 +271,7 @@ class Gradebook:
         return pd.concat((self.df_meta, df_grade, self.df_perc), axis=1)
 
     def average(self, cat_weight_dict=None, cat_drop_dict=None,
-                cat_late_dict=None, grade_thresh=None):
+                cat_late_dict=None, grade_thresh=None, late_waive_dict=None):
         """ final grades, weighted by points (default) or category weights
 
         Args:
@@ -334,9 +347,10 @@ class Gradebook:
                                                                 drop_n=drop_n)
 
             if cat in cat_late_dict:
-                # apply late penalty
-                kwargs = cat_late_dict[cat]
-                df_grade[s_mean] += self.get_late_penalty(cat=cat, **kwargs)
+                df_grade[s_mean] += self.get_late_penalty(
+                    cat=cat,
+                    waive_dict=late_waive_dict,
+                    penalty_per_day=cat_late_dict[cat]['penalty_per_day'])
 
                 # ensure penalty doesn't drop mean below 0
                 df_grade[s_mean] = df_grade[s_mean].map(lambda x: max(x, 0))

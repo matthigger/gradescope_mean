@@ -2,7 +2,7 @@ All configuration options are stored in a `.yaml` file which can be passed as:
 
     $python -m gradescope_mean scope.csv --config config.yaml
 
-Remember that tabs aren't allowed in YAML so be sure to use spaces (either 2 or 4 per indent level is fine).
+Remember that tabs aren't allowed in YAML so be sure to use spaces (either 2 or 4 per indent level, used consistently, will work).
 
 # Category
 ## Category/Weight
@@ -11,7 +11,11 @@ Remember that tabs aren't allowed in YAML so be sure to use spaces (either 2 or 
             quiz: 55
             hw: 45
 
-A category is a subset of assignments (e.g. all homework assignments).   The above configuration gives the `quiz` category 55% of the final grade weight and `hw` the remaining 45%.  Weights needn't be unnormalized but should be positive.  Assignments are mapped to categories by string comparison: each assignment should include the name of exactly one category (case-insensitive).  By [default](../gradescope_mean/config.yaml), no categories are created and every assignment is weighted by the points on gradescope. 
+A category is a subset of assignments (e.g. all homework assignments).   
+The above configuration gives the `quiz` category 55% of the final grade weight and `hw` the remaining 45%.  
+Weights needn't be unnormalized but should be positive.  
+Assignments are mapped to categories by string comparison: each assignment should include the name of exactly one category (case-insensitive).  
+By [default](../gradescope_mean/config.yaml), no categories are created and every assignment is weighted via its points on gradescope. 
 
 
 ## Category/Drop Low
@@ -20,10 +24,9 @@ A category is a subset of assignments (e.g. all homework assignments).   The abo
         drop low:
             hw: 1
 
-The above configuration waives the lowest homework assignment per each 
-student.  Any category listed here should be included in the 
-`category/weight` parameter above, though they needn't be listed if no 
-assignments are to be waived.  By [default](../gradescope_mean/config.yaml) no assignments will be dropped from any category.
+The above configuration waives the lowest homework assignment per each student.  
+Any category listed here must be included in the `category/weight` parameter above.  
+By [default](../gradescope_mean/config.yaml) no assignments will be dropped from any category.
 
 ## Category/Late Penalty
 
@@ -60,8 +63,6 @@ By [default](../gradescope_mean/config.yaml) no late penalty is applied to any c
 
 Excludes any assignment which includes the string `_dummy_quiz` or `quiz1_01` (case-insensitive comparison).  By [default](../gradescope_mean/config.yaml) no assignment is excluded.
 
-exclude_complete_thresh
-
 ## Assignments/exclude_complete_thresh
 
     assignments:
@@ -92,8 +93,19 @@ By [default](../gradescope_mean/config.yaml) no assignments are substituted.
         student0@northeastern.edu: hw1
         student1@northeastern.edu: hw1, hw2, hw3
 
-Waives assignments for individual students.  For these students, the 
-final grade is computed as if this work was never assigned.  By [default](../gradescope_mean/config.yaml) no assignments are waived.
+Waives assignments for individual students.  
+For these students, the final grade is computed as if this work was never assigned.  
+Should the student submit the assignment late, any late penalties are also waived.
+By [default](../gradescope_mean/config.yaml) no assignments are waived.
+
+# waive_late
+
+    waive_late:
+        student0@northeastern.edu: hw1
+        student1@northeastern.edu: hw1, hw2, hw3
+
+Waives any late penalties for the assignments per individual students.  This takes place before any excused late days are used.
+By [default](../gradescope_mean/config.yaml) no late penalties are waived assignments are waived.
 
 # Grade Thresh
 
