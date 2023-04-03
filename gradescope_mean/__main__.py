@@ -3,6 +3,8 @@
 import argparse
 import pathlib
 
+import pandas as pd
+
 import gradescope_mean
 
 parser = argparse.ArgumentParser(
@@ -21,6 +23,8 @@ parser.add_argument('--canvas', dest='f_canvas', action='store',
 parser.add_argument('--late_csv', dest='f_late_csv', action='store',
                     default=None,
                     help='csv of late days applied per assignment')
+parser.add_argument('--per_student', dest='per_stud', action='store_true',
+                    help='outputs csv per student')
 # load gradescope data
 args = parser.parse_args()
 
@@ -36,6 +40,16 @@ gradebook, df_grade_full = config(f_scope=args.f_scope)
 
 # output
 df_grade_full.to_csv(str(folder / 'grade_full.csv'))
+
+# outputs csv per student
+if args.per_stud:
+    _folder = folder / 'per_student'
+    _folder.mkdir(exist_ok=True)
+    for idx, row in df_grade_full.iterrows():
+        _df = pd.DataFrame(row)
+        last = row['last name']
+        first = row['first name']
+        _df.to_csv(_folder / f'{last}_{first}.csv')
 
 # print late days to csv
 if args.late_csv is not None:
