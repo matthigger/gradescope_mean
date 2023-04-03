@@ -18,6 +18,9 @@ parser.add_argument('--plot', dest='plot_flag', action='store',
 parser.add_argument('--canvas', dest='f_canvas', action='store',
                     default=None,
                     help='csv of grades downloaded from canvas (see doc at: https://github.com/matthigger/gradescope_mean/blob/main/doc/canvas.md ')
+parser.add_argument('--late_csv', dest='f_late_csv', action='store',
+                    default=None,
+                    help='csv of late days applied per assignment')
 # load gradescope data
 args = parser.parse_args()
 
@@ -33,6 +36,11 @@ gradebook, df_grade_full = config(f_scope=args.f_scope)
 
 # output
 df_grade_full.to_csv(str(folder / 'grade_full.csv'))
+
+# print late days to csv
+if args.late_csv is not None:
+    f_late = folder / args.late_csv
+    gradebook.df_lateday.to_csv(f_late.with_suffix('.csv'))
 
 # plot
 if args.plot_flag:
