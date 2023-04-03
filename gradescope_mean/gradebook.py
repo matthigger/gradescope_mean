@@ -188,7 +188,7 @@ class Gradebook:
         """
         if multi:
             # remove all assignments which match given string
-            for _ass in self.ass_list.match_multi(ass):
+            for _ass in tuple(self.ass_list.match_iter(ass)):
                 self.remove(_ass, multi=False, skip_match=True)
             return
 
@@ -239,7 +239,7 @@ class Gradebook:
             waive_dict = dict()
 
         # get late days across category
-        ass_cat_list = self.ass_list.match_multi(s_assign=cat)
+        ass_cat_list = list(self.ass_list.match_iter(s_assign=cat))
         df_late = self.df_lateday.loc[:, ass_cat_list].copy()
 
         # waive late days per email / assignment
