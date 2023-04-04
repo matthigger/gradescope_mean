@@ -2,11 +2,12 @@ import pathlib
 import shutil
 from datetime import datetime
 
-import yaml
+from ruamel.yaml import YAML
 
 from .gradebook import Gradebook
 
 F_CONFIG_DEFAULT = (pathlib.Path(__file__).parent / 'config.yaml').resolve()
+yaml = YAML(typ='safe')
 
 
 class Config:
@@ -75,8 +76,7 @@ class Config:
             config (Config): configuration
         """
         # load yaml
-        with open(f_config, 'r') as f:
-            d = yaml.safe_load(f)
+        d = yaml.load(pathlib.Path(f_config))
 
         cat_weight_dict = d['category']['weight']
         cat_drop_n = d['category']['drop_low']
