@@ -146,8 +146,9 @@ class Gradebook:
             warn(f'email not found in scope:\n{s}')
 
             email_scope_extra = email_scope - email_target
-            s = '\n'.join(email_scope_extra)
-            warn(f'maybe its one of these?\n{s}')
+            if email_scope_extra:
+                s = '\n'.join(email_scope_extra)
+                warn(f'maybe its one of these?\n{s}')
 
         # discard rows not in email_list
         email_list_found = list(email_scope.intersection(email_target))
@@ -204,7 +205,7 @@ class Gradebook:
         self.points = np.delete(self.points, ass_idx)
 
     def get_late_penalty(self, cat, penalty_per_day, excuse_day=0,
-                         excuse_day_adjust=None, waive_dict=None):
+                         excuse_day_offset=None, waive_dict=None):
         """ computes modifier to category mean to incorporate late penalty
 
         Let late_day be the total number of days late (across all hws of one
@@ -223,8 +224,8 @@ class Gradebook:
             excuse_day (int): number of excused late days each student has (can
                 be used on any assignment).  excuse_day_adjust allows this
                 default to be modified per student
-            excuse_day_adjust (dict): keys are student emails, values are the
-                excuse_day value to be used for corresponding student
+            excuse_day_offset (dict): keys are student emails, values are
+                added to excuse_day value to be used for corresponding student
             waive_dict (dict): keys are student emails, values are lists
                 of assignments whose late days are to be waived
 
@@ -251,8 +252,13 @@ class Gradebook:
         # get number of excuse days per student
         s_late_day = df_late.sum(axis=1, skipna=True)
         s_excuse_day = pd.Series(index=s_late_day.index, data=excuse_day)
-        if excuse_day_adjust is not None:
-            s_excuse_day.update(excuse_day_adjust)
+        if excuse_day_offset is not None:
+            for email, offset in excuse_day_offset.items():
+                if email in s_excuse_day:
+                    s_excuse_day[email] += offset
+                else:
+                    warn(f'email not found, excuse_day_offset ({offset}) not '
+                         f'applied: {email}')
 
         # get unexcused late days per student
         s_unexcuse_late_day = s_late_day - s_excuse_day
@@ -350,7 +356,7 @@ class Gradebook:
                 df_grade[s_mean] += self.get_late_penalty(
                     cat=cat,
                     waive_dict=late_waive_dict,
-                    penalty_per_day=cat_late_dict[cat]['penalty_per_day'])
+                    **cat_late_dict[cat])
 
                 # ensure penalty doesn't drop mean below 0
                 df_grade[s_mean] = df_grade[s_mean].map(lambda x: max(x, 0))

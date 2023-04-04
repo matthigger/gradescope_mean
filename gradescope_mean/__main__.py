@@ -25,46 +25,53 @@ parser.add_argument('--late_csv', dest='f_late_csv', action='store',
                     help='csv of late days applied per assignment')
 parser.add_argument('--per_student', dest='per_stud', action='store_true',
                     help='outputs csv per student')
-# load gradescope data
-args = parser.parse_args()
 
-# load config
-folder = pathlib.Path(args.f_scope).resolve().parent
-if args.f_config is None:
-    config = gradescope_mean.Config.cli_copy_config(folder)
-else:
-    config = gradescope_mean.Config.from_file(args.f_config)
 
-# process
-gradebook, df_grade_full = config(f_scope=args.f_scope)
+def main(args=None):
+    if args is None:
+        args = parser.parse_args()
 
-# output
-df_grade_full.to_csv(str(folder / 'grade_full.csv'))
+    # load config
+    folder = pathlib.Path(args.f_scope).resolve().parent
+    if args.f_config is None:
+        config = gradescope_mean.Config.cli_copy_config(folder)
+    else:
+        config = gradescope_mean.Config.from_file(args.f_config)
 
-# outputs csv per student
-if args.per_stud:
-    _folder = folder / 'per_student'
-    _folder.mkdir(exist_ok=True)
-    for idx, row in df_grade_full.iterrows():
-        _df = pd.DataFrame(row)
-        last = row['last name']
-        first = row['first name']
-        _df.to_csv(_folder / f'{last}_{first}.csv')
+    # process
+    gradebook, df_grade_full = config(f_scope=args.f_scope)
 
-# print late days to csv
-if args.late_csv is not None:
-    f_late = folder / args.late_csv
-    gradebook.df_lateday.to_csv(f_late.with_suffix('.csv'))
+    # output
+    df_grade_full.to_csv(str(folder / 'grade_full.csv'))
 
-# plot
-if args.plot_flag:
-    fig = gradescope_mean.plot_hist(df_grade_full=df_grade_full,
-                                    cat_weight_dict=config.cat_weight_dict)
-    f_html = folder / f'hist.html'
-    fig.write_html(str(f_html), include_plotlyjs='cdn')
+    # outputs csv per student
+    if args.per_stud:
+        _folder = folder / 'per_student'
+        _folder.mkdir(exist_ok=True)
+        for idx, row in df_grade_full.iterrows():
+            _df = pd.DataFrame(row)
+            last = row['last name']
+            first = row['first name']
+            _df.to_csv(_folder / f'{last}_{first}.csv')
 
-# canvas
-if args.f_canvas is not None:
-    gradescope_mean.canvas_merge(f_canvas=args.f_canvas,
-                                 df_grade_full=df_grade_full,
-                                 meta_col_list=gradebook.df_meta.columns)
+    # print late days to csv
+    if args.f_late_csv is not None:
+        f_late = folder / args.f_late_csv
+        gradebook.df_lateday.to_csv(f_late.with_suffix('.csv'))
+
+    # plot
+    if args.plot_flag:
+        fig = gradescope_mean.plot_hist(df_grade_full=df_grade_full,
+                                        cat_weight_dict=config.cat_weight_dict)
+        f_html = folder / f'hist.html'
+        fig.write_html(str(f_html), include_plotlyjs='cdn')
+
+    # canvas
+    if args.f_canvas is not None:
+        gradescope_mean.canvas_merge(f_canvas=args.f_canvas,
+                                     df_grade_full=df_grade_full,
+                                     meta_col_list=gradebook.df_meta.columns)
+
+
+if __name__ == '__main__':
+    main()

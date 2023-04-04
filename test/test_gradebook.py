@@ -92,8 +92,8 @@ class TestGradebook:
         s_penalty = \
             gradebook.get_late_penalty(cat='hw1', penalty_per_day=.1,
                                        excuse_day=1,
-                                       excuse_day_adjust={'last4@nu.edu': 4,
-                                                          'last3@nu.edu': 0})
+                                       excuse_day_offset={'last4@nu.edu': 3,
+                                                          'last3@nu.edu': -1})
         penalty_exp = np.array([0, 0, -.1, -.3, 0])
         np.testing.assert_allclose(penalty_exp, s_penalty)
 

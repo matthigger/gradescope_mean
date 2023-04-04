@@ -35,9 +35,9 @@ By [default](../gradescope_mean/config.yaml) no assignments will be dropped from
             hw:
                 penalty_per_day: .15
                 excuse_day: 3
-                excuse_day_adjust:
-                    student0@northeastern.edu: 0
-                    student1@northeastern.edu: 100
+                excuse_day_offset:
+                    student0@northeastern.edu: -3
+                    student1@northeastern.edu: 4
 
 - `penalty_per_day: .15` implies that every unexcused [late day](https://help.gradescope.com/article/ude437e7li-faq-late-submissions) used to submit the work will be penalized by 15% of the points possible on an average homework assignment.  For example, if a single homework is 3 unexcused days late, it will lose 45% of the average homework points across all HW assignments.
   - Note the late penalty won't show on any single HW grade, but is 
@@ -48,7 +48,7 @@ By [default](../gradescope_mean/config.yaml) no assignments will be dropped from
 - `excuse_day: 3` provides every student 3 excused late days which will not 
   be penalized.  (I find this helpful to avoid too many emails over 
   deadline minutiae which always crops up ... I stole the idea from Kevin Gold)
-- `excuse_day_adjust` allows you to adjust late days from `excuse_day` for individual students, helpful for DRC accommodations.
+- `excuse_day_offset` allows you to adjust late days from `excuse_day` for individual students, helpful for DRC accommodations.  Note that these values are additive, so that student0@northeastern.edu in the example above has 0 excuse_days while student1@northeastern.edu has 7.
 
 By [default](../gradescope_mean/config.yaml) no late penalty is applied to any category.
 
