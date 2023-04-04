@@ -79,7 +79,7 @@ class Config:
             d = yaml.safe_load(f)
 
         cat_weight_dict = d['category']['weight']
-        cat_drop_n = d['category']['drop low']
+        cat_drop_n = d['category']['drop_low']
         cat_late_dict = d['category']['late_penalty']
         exclude_list = d['assignments']['exclude']
         sub_dict = d['assignments']['substitute']

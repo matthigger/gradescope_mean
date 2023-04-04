@@ -18,10 +18,10 @@ Assignments are mapped to categories by string comparison: each assignment shoul
 By [default](../gradescope_mean/config.yaml), no categories are created and every assignment is weighted via its points on gradescope. 
 
 
-## Category/Drop Low
+## Category/drop_low
 
     category: 
-        drop low:
+        drop_low:
             hw: 1
 
 The above configuration waives the lowest homework assignment per each student.  
