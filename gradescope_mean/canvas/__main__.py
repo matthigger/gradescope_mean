@@ -7,7 +7,8 @@ import pandas as pd
 
 import gradescope_mean
 
-parser = argparse.ArgumentParser(description='preps csv for canvas upload')
+parser = argparse.ArgumentParser(description='preps csv for canvas upload ('
+                                             'https://github.com/matthigger/gradescope_mean/blob/main/doc/upload_canvas.md)')
 parser.add_argument('grade_full', type=str,
                     help='output csv of gradescope_mean CLI')
 parser.add_argument('canvas', type=str,

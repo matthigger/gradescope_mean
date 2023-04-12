@@ -15,8 +15,7 @@ class TestGradebook:
     def test_init(self, gradebook):
         df_perc_exp = pd.read_csv('df_perc_exp.csv', index_col='email')
         df_meta_exp = pd.read_csv('df_meta_exp.csv', index_col='email',
-                                  converters={'sid': str, 'crn': str,
-                                              'sid (banner)': str})
+                                  converters={'sid': str, 'crn': str})
 
         pd.testing.assert_frame_equal(df_meta_exp, gradebook.df_meta,
                                       check_dtype=False)
