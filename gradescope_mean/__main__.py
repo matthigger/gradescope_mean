@@ -17,9 +17,6 @@ parser.add_argument('--config', dest='f_config', action='store',
 parser.add_argument('--plot', dest='plot_flag', action='store',
                     default=True, help='toggles histogram plot per '
                                        'assignment category')
-parser.add_argument('--canvas', dest='f_canvas', action='store',
-                    default=None,
-                    help='csv of grades downloaded from canvas (see doc at: https://github.com/matthigger/gradescope_mean/blob/main/doc/canvas.md ')
 parser.add_argument('--late_csv', dest='f_late_csv', action='store',
                     default=None,
                     help='csv of late days applied per assignment')
@@ -65,12 +62,6 @@ def main(args=None):
                                         cat_weight_dict=config.cat_weight_dict)
         f_html = folder / f'hist.html'
         fig.write_html(str(f_html), include_plotlyjs='cdn')
-
-    # canvas
-    if args.f_canvas is not None:
-        gradescope_mean.canvas_merge(f_canvas=args.f_canvas,
-                                     df_grade_full=df_grade_full,
-                                     meta_col_list=gradebook.df_meta.columns)
 
 
 if __name__ == '__main__':
