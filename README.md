@@ -11,7 +11,7 @@ A utility which computes final grades (example: [grade_full.csv](doc/grade_full.
     - e.g. HW is penalized 15% of average assignment hw weight for every day late it is submitted 
     - also includes support for not penalizing the first N "late days" per assignment category (e.g. each student may use up to 3 "late days" across all HWs without penalty)
 - waive assignments per individual student
-- waive late penalties per individual student-assignment pair
+- waive late penalties per individual student's assignment
 - validate gradescope student list by passing an email list of active students
     - e.g. one student has a low average grade, have they dropped the course?
 - exclude assignments which shouldn't be included in final grade
@@ -33,7 +33,7 @@ Download all gradescope assignments to some local `scope.csv` file
 
     python -m gradescope_mean scope.csv
 
-to create outputs ([grade_full.csv](doc/grade_full.csv) and [hist.html](doc/hist.html)) using default options.
+to create output [grade_full.csv](doc/grade_full.csv) using default configuartion.
 This first run will have created a `config.yaml` configuration file which you can modify to take advantage of the functionality listed above (details given in the [configuration doc](doc/config.md)).
 To re-run with your configuration options:
 
@@ -41,7 +41,7 @@ To re-run with your configuration options:
 
 ## Other outputs
 
-- Provide an output file via `--late_csv` to count late days per student-assignment pair.
+- Provide an output file via `--late_csv` to observe late days per student-assignment pair.
 
 - Provide the `--per_student` flag to create a folder of student-specific csvs, helpful for emailing students the particulars of their grades.
 
@@ -51,4 +51,4 @@ To re-run with your configuration options:
 
 # Exporting Grades
 
-The interface above yields a "grade_full.csv" which can be processed so its ready to import into [canvas](doc/upload_canvas.md) or [Northeastern's Banner](doc/upload_banner.md), see documentation links for detail.
+The interface above yields a "grade_full.csv" which can be processed so its ready to import into [canvas](doc/upload_canvas.md) or [Northeastern's Banner](doc/upload_banner.md), see links for detail.
