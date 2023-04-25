@@ -15,8 +15,9 @@ parser.add_argument('--config', dest='f_config', action='store',
                     default=None,
                     help='yaml configuration (see doc at: https://github.com/matthigger/gradescope_mean/blob/main/doc/config.md)')
 parser.add_argument('--plot', dest='plot_flag', action='store',
-                    default=True, help='toggles histogram plot per '
-                                       'assignment category')
+                    default=True,
+                    help='html of histogram plot per assignment category ('
+                         'none generated if no html output file specified)')
 parser.add_argument('--late_csv', dest='f_late_csv', action='store',
                     default=None,
                     help='csv of late days applied per assignment')
