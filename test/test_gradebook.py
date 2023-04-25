@@ -1,20 +1,23 @@
 import pytest
 
+import gradescope_mean
+from gradescope_mean.config import *
 from gradescope_mean.gradebook import *
 
-import pathlib
+test_folder = pathlib.Path(gradescope_mean.__file__).parents[1] / 'test'
 
-folder = pathlib.Path(__file__).parent
 
 @pytest.fixture
 def gradebook():
-    return Gradebook(str(folder / 'scope.csv'))
+    return Gradebook(str(test_folder / 'scope.csv'))
 
 
 class TestGradebook:
     def test_init(self, gradebook):
-        df_perc_exp = pd.read_csv('df_perc_exp.csv', index_col='email')
-        df_meta_exp = pd.read_csv('df_meta_exp.csv', index_col='email',
+        df_perc_exp = pd.read_csv(test_folder / 'df_perc_exp.csv', \
+                                  index_col='email')
+        df_meta_exp = pd.read_csv(test_folder / 'df_meta_exp.csv',
+                                  index_col='email',
                                   converters={'sid': str, 'crn': str})
 
         pd.testing.assert_frame_equal(df_meta_exp, gradebook.df_meta,
