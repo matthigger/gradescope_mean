@@ -2,19 +2,20 @@ import pathlib
 import shutil
 from datetime import datetime
 
-import yaml
+from ruamel.yaml import YAML
 
 from .gradebook import Gradebook
 
 F_CONFIG_DEFAULT = (pathlib.Path(__file__).parent / 'config.yaml').resolve()
+yaml = YAML(typ='safe')
 
 
 class Config:
     def __init__(self, cat_weight_dict=None, cat_drop_dict=None,
                  remove_list=tuple(), sub_dict=None, waive_dict=None,
                  email_list=None, cat_late_dict=None,
-                 exclude_complete_thresh=None,
-                 grade_thresh=None):
+                 exclude_complete_thresh=None, grade_thresh=None,
+                 late_waive_dict=None):
         self.cat_weight_dict = cat_weight_dict
         self.cat_drop_dict = cat_drop_dict
         self.remove_list = remove_list
@@ -22,6 +23,7 @@ class Config:
         self.waive_dict = waive_dict
         self.email_list = email_list
         self.cat_late_dict = cat_late_dict
+        self.late_waive_dict = late_waive_dict
         self.exclude_complete_thresh = exclude_complete_thresh
         self.grade_thresh = grade_thresh
 
@@ -58,7 +60,8 @@ class Config:
             cat_weight_dict=self.cat_weight_dict,
             cat_drop_dict=self.cat_drop_dict,
             cat_late_dict=self.cat_late_dict,
-            grade_thresh=self.grade_thresh)
+            grade_thresh=self.grade_thresh,
+            late_waive_dict=self.late_waive_dict)
 
         return gradebook, df_grade_full
 
@@ -73,11 +76,10 @@ class Config:
             config (Config): configuration
         """
         # load yaml
-        with open(f_config, 'r') as f:
-            d = yaml.safe_load(f)
+        d = yaml.load(pathlib.Path(f_config))
 
         cat_weight_dict = d['category']['weight']
-        cat_drop_n = d['category']['drop low']
+        cat_drop_n = d['category']['drop_low']
         cat_late_dict = d['category']['late_penalty']
         exclude_list = d['assignments']['exclude']
         sub_dict = d['assignments']['substitute']

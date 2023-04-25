@@ -1,6 +1,6 @@
 category:
   weight: null
-  drop low: null
+  drop_low: null
   late_penalty: null
 
 assignments:
@@ -9,6 +9,8 @@ assignments:
   substitute: null
 
 waive: null
+
+waive_late: null
 
 grade_thresh:
   .93: A

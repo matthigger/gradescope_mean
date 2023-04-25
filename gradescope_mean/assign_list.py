@@ -3,38 +3,46 @@ class AssignmentNotFoundError(NameError):
 
 
 class AssignmentList(list):
-    """ normalizes assignment names """
+    """ lookup assignment string with partial match without spaces or capitals
+
+    the keys of the dictionary are the normalized names, the values are the
+    full names.
+    """
     MAX_PTS = ' - max points'
     LATE = ' - lateness (h:m:s)'
 
     def __init__(self, columns):
-        ass_list = [col.replace(self.MAX_PTS, '').lower() for col in columns
+        ass_list = [col.replace(self.MAX_PTS, '') for col in columns
                     if self.MAX_PTS in col]
+        ass_norm_list = [self.normalize(ass) for ass in ass_list]
+        assert len(ass_norm_list) == len(set(ass_norm_list)), \
+            'two assignment names differ by only capitalization or spacing'
         super().__init__(sorted(ass_list))
 
-    def match_multi(self, s_assign, max_pts=False):
-        """ given str, finds all matching assignment in list (containing str)
+    @classmethod
+    def normalize(cls, s):
+        """ removes spaces, makes lowercase """
+        return s.replace(' ', '').lower()
+
+    def match_iter(self, s_assign):
+        """ iterates through all matching assignments
 
         Args:
             s_assign (str): input string to match to assignment
-            max_pts (bool): if True, will add MAX_PTS to output
 
         Returns:
             s_assign_tup (tup): all matching assignments
         """
-        s_assign = s_assign.lower().strip()
-        s_assign_tup = tuple(col for col in self if s_assign in col)
+        ass_search_norm = self.normalize(s_assign)
 
-        if max_pts:
-            # add max points
-            s_assign_tup = tuple(s + self.MAX_PTS for s in s_assign_tup)
+        for ass in self:
+            if ass_search_norm in self.normalize(ass):
+                yield ass
 
-        return s_assign_tup
-
-    def match(self, s_assign, **kwargs):
+    def match(self, s_assign):
         """ finds the unique match to an assignment"""
         # get all matches
-        s_assign_tup = self.match_multi(s_assign, **kwargs)
+        s_assign_tup = tuple(self.match_iter(s_assign))
 
         # ensure match is unique
         if len(s_assign_tup) != 1:

@@ -1,19 +1,24 @@
 import pytest
 
+import gradescope_mean
+from gradescope_mean.config import *
 from gradescope_mean.gradebook import *
+
+test_folder = pathlib.Path(gradescope_mean.__file__).parents[1] / 'test'
 
 
 @pytest.fixture
 def gradebook():
-    return Gradebook('scope.csv')
+    return Gradebook(str(test_folder / 'scope.csv'))
 
 
 class TestGradebook:
     def test_init(self, gradebook):
-        df_perc_exp = pd.read_csv('df_perc_exp.csv', index_col='email')
-        df_meta_exp = pd.read_csv('df_meta_exp.csv', index_col='email',
-                                  converters={'sid': str, 'crn': str,
-                                              'sid (banner)': str})
+        df_perc_exp = pd.read_csv(test_folder / 'df_perc_exp.csv', \
+                                  index_col='email')
+        df_meta_exp = pd.read_csv(test_folder / 'df_meta_exp.csv',
+                                  index_col='email',
+                                  converters={'sid': str, 'crn': str})
 
         pd.testing.assert_frame_equal(df_meta_exp, gradebook.df_meta,
                                       check_dtype=False)
@@ -30,6 +35,10 @@ class TestGradebook:
         assert np.isnan(gradebook.df_perc.loc['last0@nu.edu', 'hw1'])
         assert np.isnan(gradebook.df_perc.loc['last1@nu.edu', 'hw1'])
         assert np.isnan(gradebook.df_perc.loc['last1@nu.edu', 'hw2'])
+
+        assert np.isnan(gradebook.df_lateday.loc['last0@nu.edu', 'hw1'])
+        assert np.isnan(gradebook.df_lateday.loc['last1@nu.edu', 'hw1'])
+        assert np.isnan(gradebook.df_lateday.loc['last1@nu.edu', 'hw2'])
 
     def test_substitute(self, gradebook):
         sub_dict = {'hw2': ['hw3'],
@@ -66,6 +75,15 @@ class TestGradebook:
                                                excuse_day=0)
         np.testing.assert_allclose(penalty_exp / 3, s_penalty)
 
+        # waive any lateness on last4@nu.edu's hw1 assignment
+        s_penalty = gradebook.get_late_penalty(
+            cat='hw1',
+            penalty_per_day=.1,
+            excuse_day=0,
+            waive_dict={'last4@nu.edu': 'hw1'})
+        penalty_exp = np.array([0, -.1, -.2, -.3, 0])
+        np.testing.assert_allclose(penalty_exp, s_penalty)
+
         # with 1 excused late date for all students, penalties drop a notch
         s_penalty = gradebook.get_late_penalty(cat='hw1', penalty_per_day=.1,
                                                excuse_day=1)
@@ -76,8 +94,8 @@ class TestGradebook:
         s_penalty = \
             gradebook.get_late_penalty(cat='hw1', penalty_per_day=.1,
                                        excuse_day=1,
-                                       excuse_day_adjust={'last4@nu.edu': 4,
-                                                          'last3@nu.edu': 0})
+                                       excuse_day_offset={'last4@nu.edu': 3,
+                                                          'last3@nu.edu': -1})
         penalty_exp = np.array([0, 0, -.1, -.3, 0])
         np.testing.assert_allclose(penalty_exp, s_penalty)
 
