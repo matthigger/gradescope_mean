@@ -169,7 +169,7 @@ class Gradebook:
             if comp_perc < min_complete_thresh:
                 msg = f'removed: {comp_perc * 100:.0f}% complete {ass}'
                 self.remove(ass, skip_match=True)
-            elif comp_perc < 1:
+            else:
                 msg = f'   kept: {comp_perc * 100:.0f}% complete {ass}'
             print(msg)
 
