@@ -37,11 +37,4 @@ def main(args=None):
 
 
 if __name__ == '__main__':
-    from collections import namedtuple
-
-    folder = '/home/matt/Dropbox/teach/DS2500/admin/grades/'
-    Args = namedtuple('Args', ['grade_full', 'term_code', 'crn_list'])
-    args = Args(grade_full=folder + 'grade_full.csv',
-                term_code='asdf',
-                crn_list=['0', '1', '2'])
-    main(args)
+    main()

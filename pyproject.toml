@@ -1,6 +1,6 @@
 [project]
 name = "gradescope_mean"
-version = "0.0.7"
+version = "0.0.9"
 authors = [
     { name = "Matt Higger", email = "matt.higger@gmail.com" },
 ]

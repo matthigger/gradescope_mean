@@ -24,8 +24,7 @@ def canvas_merge(f_canvas, df_grade, del_col_list=None,
         del_col_list = list()
 
     if rm_gradescope_meta:
-        del_col_list += ['first name', 'last name', 'sid', 'sections',
-                         'sid (banner)']
+        del_col_list += ['first name', 'last name', 'sid', 'sections']
 
     # we discard all canvas grades
     N_COL_CANVAS_META = 5
