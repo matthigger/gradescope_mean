@@ -226,6 +226,8 @@ class Gradebook:
                 of assignments whose late days are to be waived
 
         Returns:
+            s_unexcuse_late_day (pd.Series): number of unexcused late days
+                remaining (negative if late penalty applied)
             s_penalty (pd.Series): index is email.  values are adjustments
         """
         if penalty_per_day < 0:
@@ -258,12 +260,12 @@ class Gradebook:
 
         # get unexcused late days per student
         s_unexcuse_late_day = s_late_day - s_excuse_day
-        s_unexcuse_late_day[s_unexcuse_late_day < 0] = 0
 
         # get penalty
         s_penalty = - penalty_per_day * s_unexcuse_late_day / len(ass_cat_list)
+        s_penalty = s_penalty.apply(lambda x: min(x, 0))
 
-        return s_penalty
+        return s_unexcuse_late_day, s_penalty
 
     def average_full(self, *args, **kwargs):
         """ like average, but adds metadata & percentage columns to output
@@ -349,13 +351,19 @@ class Gradebook:
                                                                 drop_n=drop_n)
 
             if cat in cat_late_dict:
-                df_grade[s_mean] += self.get_late_penalty(
+                s_unexcused_late, s_penalty = self.get_late_penalty(
                     cat=cat,
                     waive_dict=late_waive_dict,
                     **cat_late_dict[cat])
 
+                df_grade[s_mean] += s_penalty
+
                 # ensure penalty doesn't drop mean below 0
                 df_grade[s_mean] = df_grade[s_mean].map(lambda x: max(x, 0))
+
+                # add late days remaining to output
+                df_grade[f'late days remain ({cat})'] = \
+                    - s_unexcused_late
 
             # add category's contribution to overall mean
             weight = cat_weight_dict[cat]

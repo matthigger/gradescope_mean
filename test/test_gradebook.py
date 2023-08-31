@@ -65,18 +65,19 @@ class TestGradebook:
 
     def test_get_late_penalty(self, gradebook):
         # remember: students use [0, 1, 2, 3, 4] late days on 'hw1'
-        s_penalty = gradebook.get_late_penalty(cat='hw1', penalty_per_day=.1,
-                                               excuse_day=0)
+        _, s_penalty = gradebook.get_late_penalty(cat='hw1',
+                                                  penalty_per_day=.1,
+                                                  excuse_day=0)
         penalty_exp = np.array([0, -.1, -.2, -.3, -.4])
         np.testing.assert_allclose(penalty_exp, s_penalty)
 
         # with 3 assignments in category, mean penalty goes down to 1/3
-        s_penalty = gradebook.get_late_penalty(cat='hw', penalty_per_day=.1,
-                                               excuse_day=0)
+        _, s_penalty = gradebook.get_late_penalty(cat='hw', penalty_per_day=.1,
+                                                  excuse_day=0)
         np.testing.assert_allclose(penalty_exp / 3, s_penalty)
 
         # waive any lateness on last4@nu.edu's hw1 assignment
-        s_penalty = gradebook.get_late_penalty(
+        _, s_penalty = gradebook.get_late_penalty(
             cat='hw1',
             penalty_per_day=.1,
             excuse_day=0,
@@ -85,13 +86,14 @@ class TestGradebook:
         np.testing.assert_allclose(penalty_exp, s_penalty)
 
         # with 1 excused late date for all students, penalties drop a notch
-        s_penalty = gradebook.get_late_penalty(cat='hw1', penalty_per_day=.1,
-                                               excuse_day=1)
+        _, s_penalty = gradebook.get_late_penalty(cat='hw1',
+                                                  penalty_per_day=.1,
+                                                  excuse_day=1)
         penalty_exp = np.array([0, 0, -.1, -.2, -.3])
         np.testing.assert_allclose(penalty_exp, s_penalty)
 
         # excusing different number of assignments per student
-        s_penalty = \
+        _, s_penalty = \
             gradebook.get_late_penalty(cat='hw1', penalty_per_day=.1,
                                        excuse_day=1,
                                        excuse_day_offset={'last4@nu.edu': 3,
@@ -120,6 +122,15 @@ class TestGradebook:
                                      cat_late_dict={'hw': kwargs})
         np.testing.assert_allclose([2 / 3, 1 / 6, 0, 0, 0],
                                    df_grade['mean_hw'])
+        np.testing.assert_allclose([0, -1, -2, -3, -4],
+                                   df_grade['late days remain (hw)'])
+
+        kwargs = {'penalty_per_day': 1,
+                  'excuse_day': 2}
+        df_grade = gradebook.average(cat_weight_dict={'hw': 1, 'quiz': 0},
+                                     cat_late_dict={'hw': kwargs})
+        np.testing.assert_allclose([2, 1, 0, -1, -2],
+                                   df_grade['late days remain (hw)'])
 
         with pytest.warns(UserWarning):
             # warns other assignments not included
