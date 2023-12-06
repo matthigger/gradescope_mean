@@ -14,8 +14,8 @@ parser.add_argument('f_scope', type=str,
 parser.add_argument('--config', dest='f_config', action='store',
                     default=None,
                     help='yaml configuration (see doc at: https://github.com/matthigger/gradescope_mean/blob/main/doc/config.md)')
-parser.add_argument('--plot', dest='plot_flag', action='store',
-                    default=True,
+parser.add_argument('--plot', dest='f_hist', action='store',
+                    default=None,
                     help='html of histogram plot per assignment category ('
                          'none generated if no html output file specified)')
 parser.add_argument('--late_csv', dest='f_late_csv', action='store',
@@ -58,10 +58,10 @@ def main(args=None):
         gradebook.df_lateday.to_csv(f_late.with_suffix('.csv'))
 
     # plot
-    if args.plot_flag:
+    if args.f_hist:
         fig = gradescope_mean.plot_hist(df_grade_full=df_grade_full,
                                         cat_weight_dict=config.cat_weight_dict)
-        f_html = folder / f'hist.html'
+        f_html = folder / args.f_hist
         fig.write_html(str(f_html), include_plotlyjs='cdn')
 
 

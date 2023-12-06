@@ -6,3 +6,4 @@
 /dist/
 /.pytest_cache/
 /gradescope_auto_py.egg-info/
+/venv/
