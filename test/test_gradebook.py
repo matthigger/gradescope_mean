@@ -140,6 +140,12 @@ class TestGradebook:
             # warns hw1 in two categories
             gradebook.average(cat_weight_dict={'hw': 1, 'hw1': 1, 'quiz': 1})
 
+        # waive all assignments in a category for a student (use only remaining
+        # categories)
+        gradebook.waive(waive_dict={'last3@nu.edu': 'hw1, hw2, hw3'})
+        df_grade = gradebook.average(cat_weight_dict={'hw': 1, 'quiz': 1})
+        assert df_grade.loc['last3@nu.edu', 'mean'] == 1
+
     def test_average_full(self, gradebook):
         gradebook.average_full()
 
