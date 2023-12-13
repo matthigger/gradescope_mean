@@ -71,7 +71,7 @@ class Gradebook:
 
         Args:
             waive_dict (dict): keys are emails, values are strings of comma
-                seperated assignments (e.g. 'hw1, hw2')
+                separated assignments (e.g. 'hw1, hw2')
         """
 
         for email, ass_many in waive_dict.items():
@@ -332,7 +332,7 @@ class Gradebook:
 
         df_grade = pd.DataFrame({'mean': 0}, index=self.df_perc.index)
 
-        weight_total = sum(cat_weight_dict.values())
+        weight_total = pd.Series(0, index=self.df_perc.index)
         for cat, cat_bool in cat_bool_dict.items():
             perc_cat = perc_all[:, cat_bool]
             _points = self.points[cat_bool]
@@ -366,9 +366,16 @@ class Gradebook:
                     - s_unexcused_late
 
             # add category's contribution to overall mean
-            weight = cat_weight_dict[cat]
-            weight = weight / weight_total
-            df_grade['mean'] += df_grade[s_mean] * weight
+            cat_missing = df_grade[s_mean].isna()
+            for email in cat_missing.index[cat_missing]:
+                print(f'{email} has no assignments in category: {cat} (ignored in final mean)')
+            weight_total += cat_weight_dict[cat] * ~cat_missing
+
+            cat_mean = df_grade[s_mean].copy()
+            cat_mean.fillna(0, inplace=True)
+            df_grade['mean'] += cat_mean * cat_weight_dict[cat]
+
+        df_grade['mean'] *= 1 / weight_total
 
         # compute letter grade
         def _perc_to_letter(perc):
