@@ -26,7 +26,8 @@ parser.add_argument('--per_student', dest='per_stud', action='store_true',
 
 
 def main(args=None):
-    args = parser.parse_args(args)
+    if args is None:
+        args = parser.parse_args()
 
     # load config
     folder = pathlib.Path(args.f_scope).resolve().parent
@@ -65,5 +66,4 @@ def main(args=None):
 
 
 if __name__ == '__main__':
-    main(['scope_dec13_1135.csv', '--config', 'config.yaml', '--plot',
-          'hist.html', '--late_csv', 'late.csv', '--per_student'])
+    main()
