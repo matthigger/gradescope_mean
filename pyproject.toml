@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gradescope-mean"
-version = "0.0.12"
+version = "0.0.13"
 description = "Utility to average gradescope csv output to final grades"
 authors = ["Matt Higger <mhigger@ccs.neu.edu>"]
 readme = "README.md"
