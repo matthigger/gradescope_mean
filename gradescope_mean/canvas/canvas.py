@@ -67,6 +67,9 @@ def canvas_merge(f_canvas, df_grade, del_col_list=None,
 
     if scale100:
         for col in df_canvas_out.columns[N_COL_CANVAS_META:]:
+            if 'late days remain' in col:
+                # don't scale late days
+                continue
             dtype = df_canvas_out[col].dtype
             if pd.api.types.is_numeric_dtype(dtype):
                 df_canvas_out[col] = df_canvas_out[col] * 100
