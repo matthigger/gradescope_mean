@@ -13,7 +13,9 @@ Remember that tabs aren't allowed in YAML so be sure to use spaces (either 2 or 
             quiz: 55
             hw: 45
 
-A category is a subset of assignments (e.g. all homework assignments). The above configuration gives the `quiz` category 55% of the final grade weight and `hw` the remaining 45%. Weights needn't be unnormalized but should be positive. Assignments are mapped to categories by string comparison: each assignment should include the name of exactly one category (case-and-space-insensitive). By [default](../gradescope_mean/config.yaml), no categories are created and every assignment is weighted via its points on gradescope.
+A category is a subset of assignments (e.g. all homework assignments). The above configuration gives the `quiz` category 55% of the final grade weight and `hw` the remaining 45%. Weights needn't be unnormalized but should be positive. 
+
+📢 **Note:  Assignments are mapped to categories by string comparison.**  Each assignment should include the name of exactly one category (case-and-space-insensitive). By [default](../gradescope_mean/config.yaml), no categories are created and every assignment is weighted via its points on gradescope.
 
 ## Category/drop_low
 

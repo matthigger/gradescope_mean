@@ -12,7 +12,7 @@ def ass_list():
 
 class TestAssignmentList:
     def test_normalize(self):
-        assert AssignmentList.normalize('  A B C 1 2 3') == 'abc123'
+        assert normalize('  A B C 1 2 3') == 'abc123'
 
     def test_init(self, ass_list):
         ass_list_exp = ['H W 1', 'HW2']

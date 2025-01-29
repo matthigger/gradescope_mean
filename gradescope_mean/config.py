@@ -4,6 +4,7 @@ from datetime import datetime
 
 from ruamel.yaml import YAML
 
+from .assign_list import normalize
 from .gradebook import Gradebook
 
 F_CONFIG_DEFAULT = (pathlib.Path(__file__).parent / 'config.yaml').resolve()
@@ -14,18 +15,75 @@ class Config:
     def __init__(self, cat_weight_dict=None, cat_drop_dict=None,
                  remove_list=tuple(), sub_dict=None, waive_dict=None,
                  email_list=None, cat_late_dict=None,
-                 exclude_complete_thresh=None, grade_thresh=None,
+                 exclude_complete_thresh=0, grade_thresh=None,
                  late_waive_dict=None):
-        self.cat_weight_dict = cat_weight_dict
-        self.cat_drop_dict = cat_drop_dict
-        self.remove_list = remove_list
-        self.sub_dict = sub_dict
-        self.waive_dict = waive_dict
-        self.email_list = email_list
-        self.cat_late_dict = cat_late_dict
-        self.late_waive_dict = late_waive_dict
+        if cat_late_dict is None:
+            self.cat_weight_dict = dict()
+        else:
+            self.cat_weight_dict = cat_weight_dict
+
+        if cat_drop_dict is None:
+            self.cat_drop_dict = dict()
+        else:
+            self.cat_drop_dict = cat_drop_dict
+
+        if remove_list is None:
+            self.remove_list = list()
+        else:
+            self.remove_list = remove_list
+
+        if sub_dict is None:
+            self.sub_dict = dict()
+        else:
+            self.sub_dict = sub_dict
+
+        if waive_dict is None:
+            self.waive_dict = dict()
+        else:
+            self.waive_dict = waive_dict
+
+        if email_list is None:
+            self.email_list = list()
+        else:
+            self.email_list = email_list
+
+        if cat_late_dict is None:
+            self.cat_late_dict = dict()
+        else:
+            self.cat_late_dict = cat_late_dict
+
+        if late_waive_dict is None:
+            self.late_waive_dict = dict()
+        else:
+            self.late_waive_dict = late_waive_dict
+
         self.exclude_complete_thresh = exclude_complete_thresh
         self.grade_thresh = grade_thresh
+
+        self._normalize()
+
+    def _normalize(self):
+        """ normalizes category names, throws meaningful errors if invalid """
+        # normalize assignment names
+        self.cat_weight_dict = {normalize(c): w
+                                for c, w in self.cat_weight_dict.items()}
+
+        self.cat_drop_dict = {normalize(c): d
+                              for c, d in self.cat_drop_dict.items()}
+
+        self.remove_list = [normalize(a) for a in self.remove_list]
+
+        self.sub_dict = {normalize(s0): normalize(s1)
+                         for s0, s1 in self.sub_dict.items()}
+
+        self.waive_dict = {email: [normalize(a) for a in a_list]
+                           for email, a_list in self.waive_dict.items()}
+
+        self.cat_late_dict = {normalize(c): l
+                              for c, l in self.cat_late_dict.items()}
+        self.late_waive_dict = {email: [normalize(a) for a in a_list]
+                                for email, a_list in
+                                self.late_waive_dict.items()}
 
     def __call__(self, f_scope):
         """ runs a typical processing pipeline given config and f_scop
@@ -39,21 +97,18 @@ class Config:
         """
         gradebook = Gradebook(f_scope=f_scope)
 
-        if self.email_list is not None:
+        if self.email_list:
             gradebook.prune_email(email_list=self.email_list)
 
-        if self.sub_dict is not None:
+        if self.sub_dict:
             gradebook.substitute(sub_dict=self.sub_dict)
 
-        if self.remove_list is not None:
-            for ass in self.remove_list:
-                gradebook.remove(ass, multi=True)
+        for ass in self.remove_list:
+            gradebook.remove(ass, multi=True)
 
-        if self.exclude_complete_thresh is not None:
-            gradebook.remove_thresh(
-                min_complete_thresh=self.exclude_complete_thresh)
+        gradebook.remove_thresh(min_complete_thresh=self.exclude_complete_thresh)
 
-        if self.waive_dict is not None:
+        if self.waive_dict:
             gradebook.waive(waive_dict=self.waive_dict)
 
         df_grade_full = gradebook.average_full(
@@ -121,6 +176,8 @@ class Config:
 
         # copy config
         shutil.copy(F_CONFIG_DEFAULT, f_config)
-        print(f'using config file: {f_config}')
+        print(f'using new copy of default config file.  see '
+              f'https://github.com/matthigger/gradescope_mean/blob/main/doc'
+              f'/config.md for details:\n {f_config}')
 
         return cls.from_file(f_config)

@@ -22,13 +22,14 @@ def main(args=None):
 
     df = pd.read_csv(args.grade_full)
 
-    df['term_code'] = args.term_code
+    df['Term Code'] = args.term_code
 
     for idx, crn in enumerate(args.crn_list):
-        df[f'crn{idx}'] = crn
+        df[f'CRN{idx}'] = crn
 
     # modify student ID to banner format
-    df['sid'] = df['sid'].map(lambda x: str(x).strip('S').zfill(9))
+    df['Student ID'] = df['sid'].map(lambda x: str(x).strip('S').zfill(9))
+    del df['sid']
 
     # output csv
     timestamp = datetime.now().strftime('%b%d_%H%M')
