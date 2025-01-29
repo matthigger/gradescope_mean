@@ -2,6 +2,11 @@ class AssignmentNotFoundError(NameError):
     pass
 
 
+def normalize(s):
+    """ removes spaces, makes lowercase """
+    return s.replace(' ', '').lower()
+
+
 class AssignmentList(list):
     """ lookup assignment string with partial match without spaces or capitals
 
@@ -14,15 +19,10 @@ class AssignmentList(list):
     def __init__(self, columns):
         ass_list = [col.replace(self.MAX_PTS, '') for col in columns
                     if self.MAX_PTS in col]
-        ass_norm_list = [self.normalize(ass) for ass in ass_list]
+        ass_norm_list = [normalize(ass) for ass in ass_list]
         assert len(ass_norm_list) == len(set(ass_norm_list)), \
             'two assignment names differ by only capitalization or spacing'
         super().__init__(sorted(ass_list))
-
-    @classmethod
-    def normalize(cls, s):
-        """ removes spaces, makes lowercase """
-        return s.replace(' ', '').lower()
 
     def match_iter(self, s_assign):
         """ iterates through all matching assignments
@@ -33,10 +33,10 @@ class AssignmentList(list):
         Returns:
             s_assign_tup (tup): all matching assignments
         """
-        ass_search_norm = self.normalize(s_assign)
+        ass_search_norm = normalize(s_assign)
 
         for ass in self:
-            if ass_search_norm in self.normalize(ass):
+            if ass_search_norm in normalize(ass):
                 yield ass
 
     def match(self, s_assign):

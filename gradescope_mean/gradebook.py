@@ -155,7 +155,7 @@ class Gradebook:
         self.df_meta = self.df_meta.loc[email_list_found, :]
         self.df_lateday = self.df_lateday.loc[email_list_found, :]
 
-    def remove_thresh(self, min_complete_thresh=.9):
+    def remove_thresh(self, min_complete_thresh):
         """ removes assignments which not enough students have submitted
 
         Args:
@@ -298,7 +298,7 @@ class Gradebook:
         Returns:
             df_grade (pd.DataFrame): final grade
         """
-        if cat_weight_dict is None:
+        if cat_weight_dict is None or cat_weight_dict == dict():
             # all assignments contain ''
             cat_weight_dict = {'': 1}
 
