@@ -121,6 +121,8 @@ class Config:
 
         # copy config
         shutil.copy(F_CONFIG_DEFAULT, f_config)
-        print(f'using config file: {f_config}')
+        print(f'using new copy of default config file.  see '
+              f'https://github.com/matthigger/gradescope_mean/blob/main/doc'
+              f'/config.md for details:\n {f_config}')
 
         return cls.from_file(f_config)
