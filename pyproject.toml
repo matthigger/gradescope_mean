@@ -1,23 +1,25 @@
-[tool.poetry]
+[project]
 name = "gradescope-mean"
-version = "0.0.11"
+version = "0.0.15"
 description = "Utility to average gradescope csv output to final grades"
-authors = ["Matt Higger <mhigger@ccs.neu.edu>"]
+authors = [
+    {name = "Matt Higger",email = "mhigger@ccs.neu.edu"}
+]
 readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "^3.10"
-numpy = "^1.26.2"
-pandas = "^2.1.3"
-plotly = "^5.18.0"
-pytest = "^7.4.3"
-"ruamel.yaml" = "^0.18.5"
-openpyxl = "^3.1.5"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy (>=2.2.2,<3.0.0)",
+    "pandas (>=2.2.3,<3.0.0)",
+    "plotly (>=6.0.0,<7.0.0)",
+    "ruamel-yaml (>=0.18.10,<0.19.0)",
+    "openpyxl (>=3.1.5,<4.0.0)"
+]
 
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-[project.urls]
-"Homepage" = "https://github.com/matthigger/gradescope_mean"
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+
