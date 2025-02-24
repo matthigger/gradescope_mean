@@ -70,12 +70,11 @@ class Gradebook:
         """ waives assignment (per student) by marking percentages as nan
 
         Args:
-            waive_dict (dict): keys are emails, values are strings of comma
-                separated assignments (e.g. 'hw1, hw2')
+            waive_dict (dict): keys are emails, values are lists of assignments
         """
 
-        for email, ass_many in waive_dict.items():
-            for ass in ass_many.split(','):
+        for email, ass_list in waive_dict.items():
+            for ass in ass_list:
                 try:
                     _ass = self.ass_list.match(ass)
                     self.df_perc.loc[email, _ass] = np.nan
@@ -242,10 +241,11 @@ class Gradebook:
         df_late = self.df_lateday.loc[:, ass_cat_list].copy()
 
         # waive late days per email / assignment
-        for email, ass in waive_dict.items():
-            ass = self.ass_list.match(ass)
-            if ass in df_late.columns:
-                df_late.loc[email, ass] = np.nan
+        for email, ass_list in waive_dict.items():
+            for ass in ass_list:
+                ass = self.ass_list.match(ass)
+                if ass in df_late.columns:
+                    df_late.loc[email, ass] = np.nan
 
         # get number of excuse days per student
         s_late_day = df_late.sum(axis=1, skipna=True)
@@ -368,7 +368,8 @@ class Gradebook:
             # add category's contribution to overall mean
             cat_missing = df_grade[s_mean].isna()
             for email in cat_missing.index[cat_missing]:
-                print(f'{email} has no assignments in category: {cat} (ignored in final mean)')
+                print(
+                    f'{email} has no assignments in category: {cat} (ignored in final mean)')
             weight_total += cat_weight_dict[cat] * ~cat_missing
 
             cat_mean = df_grade[s_mean].copy()

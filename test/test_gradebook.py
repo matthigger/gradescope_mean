@@ -28,8 +28,8 @@ class TestGradebook:
                                    gradebook.df_lateday.loc[:, 'hw1'])
 
     def test_waive(self, gradebook):
-        waive_dict = {'last0@nu.edu': 'hw1',
-                      'last1@nu.edu': 'hw1, hw2'}
+        waive_dict = {'last0@nu.edu': ['hw1', ],
+                      'last1@nu.edu': ['hw1', 'hw2']}
         gradebook.waive(waive_dict)
 
         assert np.isnan(gradebook.df_perc.loc['last0@nu.edu', 'hw1'])
@@ -81,7 +81,7 @@ class TestGradebook:
             cat='hw1',
             penalty_per_day=.1,
             excuse_day=0,
-            waive_dict={'last4@nu.edu': 'hw1'})
+            waive_dict={'last4@nu.edu': ['hw1', ]})
         penalty_exp = np.array([0, -.1, -.2, -.3, 0])
         np.testing.assert_allclose(penalty_exp, s_penalty)
 
@@ -142,7 +142,7 @@ class TestGradebook:
 
         # waive all assignments in a category for a student (use only remaining
         # categories)
-        gradebook.waive(waive_dict={'last3@nu.edu': 'hw1, hw2, hw3'})
+        gradebook.waive(waive_dict={'last3@nu.edu': ['hw1', 'hw2', 'hw3']})
         df_grade = gradebook.average(cat_weight_dict={'hw': 1, 'quiz': 1})
         assert df_grade.loc['last3@nu.edu', 'mean'] == 1
 
