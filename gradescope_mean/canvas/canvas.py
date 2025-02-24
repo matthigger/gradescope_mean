@@ -12,7 +12,7 @@ def canvas_merge(f_canvas, df_grade, del_col_list=None,
         del_col_list (list): list of columns to delete from final output csv
         rm_gradescope_meta (bool): if True, removes the following columns (
             default meta data from pipeline):
-            'first name', 'last name', 'sid', 'sections', 'sid (banner)'
+            'firstname', 'lastname', 'sid', 'sections', 'sid (banner)'
         scale100 (bool): if True, scales grades by 100 (canvas displays with
             precision 2 and rounds this final value ...)
 
@@ -24,7 +24,7 @@ def canvas_merge(f_canvas, df_grade, del_col_list=None,
         del_col_list = list()
 
     if rm_gradescope_meta:
-        del_col_list += ['first name', 'last name', 'sid', 'sections']
+        del_col_list += ['firstname', 'lastname', 'sid', 'sections']
 
     # we discard all canvas grades
     N_COL_CANVAS_META = 5

@@ -4,7 +4,7 @@ from warnings import warn
 import numpy as np
 import pandas as pd
 
-from .assign_list import AssignmentList, AssignmentNotFoundError
+from .assign_list import AssignmentList, AssignmentNotFoundError, normalize
 from .get_mean_drop_low import get_mean_drop_low
 from .perc_to_letter import perc_to_letter
 
@@ -28,7 +28,7 @@ class Gradebook:
         df_scope = pd.read_csv(str(f_scope), index_col='Email')
 
         # groom input data
-        df_scope.columns = [s.lower() for s in df_scope.columns]
+        df_scope.columns = map(normalize, df_scope.columns)
         for idx in range(self.META_DATA_COLS):
             if df_scope.columns[idx] == 'sid':
                 # student ids are ints, lets not cast to str
