@@ -71,8 +71,11 @@ def main(args=None):
 
     # plot pca scatter
     if args.f_pca:
+        point_dict = dict(zip(gradebook.ass_list,
+                              gradebook.points))
         fig = gradescope_mean.plot_pca(df_grade_full=df_grade_full,
-                                       cat_weight_dict=config.cat_weight_dict)
+                                       cat_weight_dict=config.cat_weight_dict,
+                                       point_dict=point_dict)
         f_pca = folder / args.f_pca
         fig.write_html(str(f_pca), include_plotlyjs='cdn')
 

@@ -40,7 +40,7 @@ def plot_hist(df_grade_full, cat_weight_dict):
     return fig
 
 
-def plot_pca(df_grade_full, cat_weight_dict):
+def plot_pca(df_grade_full, cat_weight_dict, point_dict):
     """ plots scatter of students on 1st 2 PCA directions
 
     (helps identify trends between assignments and spot outliers, likely hw
@@ -50,6 +50,8 @@ def plot_pca(df_grade_full, cat_weight_dict):
     Args:
         df_grade_full (pd.DataFrame):
         cat_weight_dict (dict): keys are categories, values are weights
+        point_dict (dict): keys are assignments (str), values are max points
+            per assignment
 
     Returns:
         fig (plotly):
@@ -62,24 +64,51 @@ def plot_pca(df_grade_full, cat_weight_dict):
     idx_letter = list(df_grade_full.columns).index('letter')
     df = df_grade_full.iloc[:, idx_letter + 1:].copy()
 
+    # compute scale per category
+    weight_total = sum(cat_weight_dict.values())
+    cat_scale_dict = {cat: weight / weight_total
+                      for cat, weight in cat_weight_dict.items()}
+
+    # compute scale per assignment
+    ass_list = df_grade_full.columns[idx_letter + 1:]
+    cat_bool_dict = {cat: np.array([cat in ass for ass in ass_list])
+                     for cat in cat_weight_dict.keys()}
+    assert (sum(cat_bool_dict.values()) == 1).all(), \
+        'mapping from assignments to categories broken'
+    perc = np.ones(len(ass_list))
+    points = np.array([point_dict[ass] for ass in ass_list])
+    for idx, ass in enumerate(ass_list):
+        # lookup category
+        for cat in cat_weight_dict.keys():
+            if cat in ass:
+                break
+
+        # compute scale for this assignment
+        perc[idx] = point_dict[ass] / sum(points[cat_bool_dict[cat]]) * \
+            cat_scale_dict[cat]
+
     # center and impute
     df -= df.mean()
     df = df.fillna(0)
 
-    # pca projection
+    # scale & pca projection
     x = df.values
+    x = x @ np.diag(perc ** .5 / x.std(axis=0))
+    assert np.allclose(x.std(axis=0), perc ** .5)
     c = np.cov(x.T)
-    vals, vecs = np.linalg.eig(c)
+    evals, evecs = np.linalg.eig(c)
 
     # ensure pca vectors largely point "positive" (top right is for strong
-    # students in resulting graph)
-    flip = (vecs > 0).sum(axis=0) > x.shape[1] / 2
-    vecs = vecs @ np.diag(flip)
+    # students in resulting graph).  we flip direction if most of the weight
+    # in a component is negative
+    weight_tug_war = np.diag(perc) @ ((evecs > 0) * 2 - 1)
+    flip = weight_tug_war.sum(axis=0) > 0
+    evecs = evecs @ np.diag(flip * 2 - 1)
 
     # prep p
     df = df_grade_full.copy()
-    df['pca0'] = x @ vecs[:, 0]
-    df['pca1'] = x @ vecs[:, 1]
+    df['pca0'] = x @ evecs[:, 0]
+    df['pca1'] = x @ evecs[:, 1]
     fig = px.scatter(df,
                      x='pca0',
                      y='pca1',
