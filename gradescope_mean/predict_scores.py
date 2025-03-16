@@ -57,8 +57,7 @@ def calculate_assignment_z_scores(df):
 def clean_raw_csv(csv_path: str) -> pd.DataFrame:
     df = pd.read_csv(csv_path)
 
+
     return df
 
 
-
-clean_raw_csv("/Users/trymkyvag/Desktop/Northeastern/Spring 25/Research Project -- Prof.Higger/gradescope_mean/real_grades/CS1800.MERGED.202530_Spring_2025_grades-2.csv")
