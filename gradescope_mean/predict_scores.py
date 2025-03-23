@@ -1,8 +1,6 @@
 import plotly.graph_objects as go
-import plotly.express as px
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
 from typing import List, Dict, Tuple, Optional
 
@@ -373,7 +371,6 @@ def run_analysis(csv_path: str,
     return df, results, z_scores
 
 
-# Example usage
 if __name__ == "__main__":
     csv_path = "path"
 
