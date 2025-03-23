@@ -4,290 +4,388 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
+from typing import List, Dict, Tuple, Optional
 
 
-def calculate_exam_predictions(df, hw_assignments):
+def calculate_predictions(df: pd.DataFrame,
+                          target_assignments: List[str],
+                          predictor_assignments: Optional[List[str]] = None,
+                          target_category_name: str = "Target",
+                          predictor_category_name: str = "Predictors") -> Tuple[pd.DataFrame, np.ndarray]:
     '''
-    Given a clean df, predict exam score from a set of X homework assignments
+    General prediction function: predict scores for target assignments from predictor assignments
+
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        Dataframe containing assignment scores
+    target_assignments : List[str]
+        List of assignments to predict (e.g., ["Exam1", "Exam2"])
+    predictor_assignments : Optional[List[str]]
+        List of assignments to use as predictors. If None, uses all assignments except targets.
+    target_category_name : str
+        Name to use when describing the target category (e.g., "Exam", "Final Project")
+    predictor_category_name : str
+        Name to use when describing the predictor category (e.g., "Homework", "Assignments")
+
+    Returns:
+    --------
+    result_df : pd.DataFrame
+        DataFrame with prediction results
+    z_scores : np.ndarray
+        Z-scores for all predictions
     '''
-    # Extract just the homework score columns
-    score_cols = [f"Weighted_{hw}" for hw in hw_assignments]
+    print(f"\n===== Estimating {target_category_name} ({', '.join(target_assignments)}) " +
+          f"from {predictor_category_name} ({', '.join(predictor_assignments or [])}) =====")
 
-    # Get the exam column
-    exam_col = "Exam1"
+    # Extract emails for output
+    emails = df['Email'].values
 
-    # Extract feature matrix (homework scores) and target vector (exam score)
-    x = df[score_cols].values
-    y = df[exam_col].values
+    # If predictor_assignments is None, use all assignments except targets
+    if predictor_assignments is None:
+        weighted_cols = [
+            col for col in df.columns if col.startswith('Weighted_')]
+        predictor_assignments = [col.replace('Weighted_', '') for col in weighted_cols
+                                 if col.replace('Weighted_', '') not in target_assignments]
+        print(
+            f"No predictors specified, using all available: {predictor_assignments}")
 
-    n_stud = x.shape[0]
+    target_cols = [f"Weighted_{hw}" for hw in target_assignments]
+    predictor_cols = [f"Weighted_{hw}" for hw in predictor_assignments]
 
-    # Handle NaN values in homework scores: sett them to 0
-    for col_idx in range(len(score_cols)):
+    # Extract feature matrix and target vector 
+    x = df[predictor_cols].values
+
+    # Handle NaN values in predictor scores: set them to 0 since we mask them
+    for col_idx in range(len(predictor_cols)):
         mask = np.isnan(x[:, col_idx])
+        if np.any(mask):
+            print(
+                f"Note: {sum(mask)} missing values in {predictor_cols[col_idx]} set to 0")
         x[mask, col_idx] = 0
 
-    # Handle NaN values in exam scores
-    # exam_mean = np.nanmean(y)
-    y[np.isnan(y)] = 0
-
-    # Append bias column of ones to x
-    x_with_bias = np.concatenate([np.ones((n_stud, 1)), x], axis=1)
-
-    # Project y to estimates
-    y_hat = x_with_bias @ np.linalg.pinv(x_with_bias) @ y
-
-    print(
-        f"Exam prediction: Predicted values: {y_hat[:5]}, Actual values: {y[:5]}")
-
-    r2 = r2_score(y, y_hat)  # hmmm
-
-    # Calculate z-scores (residuals)
-    residuals = y - y_hat
-    z = residuals / np.std(residuals)
-
-    # Create results DataFrame
-    result_df = pd.DataFrame({
-        'Email': df['Email'],
-        'Actual_Exam_Score': y,
-        'Predicted_Exam_Score': y_hat,
-        'Z_Score': z,
-        'R2_Score': [r2] * n_stud
-    })
-
-    return result_df, z
-
-
-def calculate_x_predictions(df, hw_assignments):
-    '''
-    For every assignment x, predict its score based on all others via linear regression.
-    Express each student's residual as a z score (divide by regression error std dev).
-    Identify largest magnitude z scores (biggest surprise performers on each assignment).
-    '''
-    # Extract homework score columns and exam column
-    weighted_hw_cols = [f"Weighted_{hw}" for hw in hw_assignments]
-    all_cols = weighted_hw_cols + ["Exam1"]
-    assignment_names = hw_assignments + ["Exam1"]
-
-    # Filter to only include students with valid exam scores
-    valid_students = df["Exam1"].notna()
-    valid_df = df[valid_students].copy()
-    emails = valid_df['Email'].values
-
-    # Create matrix of all scores (homework and exam)
-    x = np.zeros((valid_df.shape[0], len(all_cols)))
-
-    # Fill matrix with values, replacing NaN with 0
-    for col_idx, col in enumerate(all_cols):
-        values = valid_df[col].values
-        values[np.isnan(values)] = 0
-        x[:, col_idx] = values
-
-    # Get dimensions
-    n_stud, n_ass = x.shape
-
-    # Initialize z-scores and R2 values arrays
-    z = np.zeros(x.shape)
-    r2_values = np.zeros(n_ass)
-
-    for ass_idx in range(n_ass):
-
-        # split to target assignment & features
-        _y = x[:, ass_idx]
-        b = np.ones(n_ass, dtype=bool)
-        b[ass_idx] = False
-        _x = x[:, b]
-
-        # append bias column of ones to x (allows nonzero intercept)
-        _x = np.concatenate([np.ones((n_stud, 1)), _x], axis=1)
-
-        # project _y to estimates
-        _y_hat = _x @ np.linalg.pinv(_x) @ _y
-
-        # compute z score
-        err = _y - _y_hat
-        z[:, ass_idx] = err / np.std(err)
-
-        # calculate R2 value
-        r2_values[ass_idx] = r2_score(_y, _y_hat)
-
+    # Initialize results storage
     all_results = []
+    z_scores_dict = {}
 
-    for ass_idx in range(n_ass):
-        for stud_idx in range(n_stud):
+    # For each target assignment, perform prediction
+    for target_idx, target_col in enumerate(target_cols):
+        y = df[target_col].values
+
+        missing_mask = np.isnan(y)
+        if np.any(missing_mask):
+            print(
+                f"Skipping {sum(missing_mask)} students with missing {target_col} scores")
+
+        # Filter to only students with valid target scores (they took exam)
+        valid_indices = ~missing_mask
+        valid_emails = emails[valid_indices]
+        valid_x = x[valid_indices]
+        valid_y = y[valid_indices]
+
+        if len(valid_y) == 0:
+            print(f"No valid scores for {target_col}, skipping")
+            continue
+
+        # Append bias column of ones to x
+        x_with_bias = np.concatenate(
+            [np.ones((valid_x.shape[0], 1)), valid_x], axis=1)
+
+        # Project y to estimates
+        y_hat = x_with_bias @ np.linalg.pinv(x_with_bias) @ valid_y
+
+        # Calculate R2 score
+        r2 = r2_score(valid_y, y_hat)
+
+        # Calculate z-scores
+        residuals = valid_y - y_hat
+        z = residuals / np.std(residuals)
+
+        z_scores_dict[target_assignments[target_idx]] = {
+            'emails': valid_emails,
+            'z_scores': z,
+            'r2': r2
+        }
+
+        print(
+            f"\nPrediction for {target_assignments[target_idx]} (R² = {r2:.2f}):")
+        print(
+            f"  Sample predictions: Actual: {valid_y[:3]} | Predicted: {y_hat[:3]}")
+
+        z_abs = np.abs(z)
+        sorted_indices = np.argsort(z_abs)[::-1]
+
+        print(f"\nTop outliers for {target_assignments[target_idx]}:")
+        for i in range(min(3, len(sorted_indices))):
+            idx = sorted_indices[i]
+            direction = "+" if z[idx] > 0 else "-"
+            print(
+                f"  {direction}{abs(z[idx]):.1f} std dev: {valid_emails[idx]}")
+
+        for i in range(len(valid_emails)):
             all_results.append({
-                'Email': emails[stud_idx],
-                'Assignment': assignment_names[ass_idx],
-                'Z_Score': z[stud_idx, ass_idx],
-                'R2': r2_values[ass_idx]
+                'Email': valid_emails[i],
+                'Target': target_assignments[target_idx],
+                'Actual_Score': valid_y[i],
+                'Predicted_Score': y_hat[i],
+                'Z_Score': z[i],
+                'R2_Score': r2
             })
 
-    results_df = pd.DataFrame(all_results)
+    result_df = pd.DataFrame(all_results)
 
-    # Find top outliers for each assignment
-    print("Top outliers for each assignment (predicted from all others):")
-    for ass_name in assignment_names:
-        ass_results = results_df[results_df['Assignment'] == ass_name].copy()
-        ass_results['abs_z'] = ass_results['Z_Score'].abs()
-        top_outliers = ass_results.sort_values(
-            'abs_z', ascending=False).head(3)
-
-        r2 = top_outliers['R2'].iloc[0]
-        print(f"\n{ass_name} (R² = {r2:.2f}):")
-
-        for _, row in top_outliers.iterrows():
-            direction = "+" if row['Z_Score'] > 0 else "-"
-            print(
-                f"  {direction}{abs(row['Z_Score']):.1f} std dev: {row['Email']}")
-
-    # Identify students who consistently over/underperform
-    print("\nConsistency analysis (students who tend to over/underperform):")
-    student_means = results_df.groupby('Email')['Z_Score'].mean().sort_values()
-    student_stds = results_df.groupby('Email')['Z_Score'].std()
-
-    # Consistent underperformers (negative mean z-score)
-    print("\nConsistent underperformers:")
-    for email, mean_z in student_means.head(3).items():
-        std_z = student_stds[email]
-        print(f"  {email}: mean z-score = {mean_z:.2f}, std = {std_z:.2f}")
-
-    # Consistent overperformers (positive mean z-score)
-    print("\nConsistent overperformers:")
-    for email, mean_z in student_means.tail(3).items():
-        std_z = student_stds[email]
-        print(f"  {email}: mean z-score = {mean_z:.2f}, std = {std_z:.2f}")
-
-    # Exam vs homework performance patterns
-    print("\nExam vs homework performance patterns:")
-    for _, student in valid_df.iterrows():
-        email = student['Email']
-        hw_zs = results_df[(results_df['Email'] == email) &
-                           (results_df['Assignment'] != 'Exam1')]['Z_Score'].mean()
-        exam_z = results_df[(results_df['Email'] == email) &
-                            (results_df['Assignment'] == 'Exam1')]['Z_Score'].iloc[0]
-
-        # Look for large discrepancies between homework and exam performance
-        if abs(hw_zs - exam_z) > 1.5:
-            pattern = "performs better on exam than homework" if exam_z > hw_zs else "performs better on homework than exam"
-            print(
-                f"  {email}: {pattern} (hw avg z = {hw_zs:.2f}, exam z = {exam_z:.2f})")
-
-    return results_df, z, r2_values
+    return result_df, z_scores_dict
 
 
-def clean_raw_csv(csv_path: str, hw_assignments: list) -> pd.DataFrame:
+def detect_assignment_categories(df: pd.DataFrame) -> Dict[str, List[str]]:
+    """
+    Automatically detect homework and exam assignments from column names.
+
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        Dataframe containing assignment scores
+
+    Returns:
+    --------
+    Dict[str, List[str]]
+        Dictionary with keys 'homeworks' and 'exams' containing lists of assignment names
+    """
+    # Get columns that have been weighted (to 100)
+    weighted_cols = [col for col in df.columns if col.startswith('Weighted_')]
+    assignment_names = [col.replace('Weighted_', '') for col in weighted_cols]
+
+    # Categorize by exam and hw
+    exams = [name for name in assignment_names if 'exam' in name.lower()]
+    homeworks = [name for name in assignment_names if 'hw' in name.lower(
+    ) or 'homework' in name.lower()]
+
+    # Idk if we are going to have others
+    other = [
+        name for name in assignment_names if name not in exams and name not in homeworks]
+
+    return {
+        'exams': exams,
+        'homeworks': homeworks,
+        'other': other
+    }
+
+
+def clean_raw_csv(csv_path: str, hw_assignments: Optional[List[str]] = None) -> pd.DataFrame:
     '''
-        This whole function can potentailly be changed
-        , but it creates a score out of 100 no matter the max of the 
-        assignment. 50 out of 75 -> 75%.
+    Clean and prepare raw CSV data for analysis.
+
+    Parameters:
+    -----------
+    csv_path : str
+        Path to the CSV file
+    hw_assignments : Optional[List[str]]
+        List of homework assignments to include. If None, will try to detect automatically.
+
+    Returns:
+    --------
+    pd.DataFrame
+        Cleaned dataframe with weighted scores
     '''
     df = pd.read_csv(csv_path)
 
-    filtered_df = _cols_to_keep(df, hw_assignments).copy()
+    # If hw_assignments not provided, try to detect from column names
+    if hw_assignments is None:
+        possible_hw_cols = [
+            col for col in df.columns if 'hw' in col.lower() and ' - Max Points' not in col]
+        hw_assignments = [
+            col for col in possible_hw_cols if f"{col} - Max Points" in df.columns]
+        print(f"Auto-detected homework assignments: {hw_assignments}")
+
+    # Detect exam columns
+    exam_cols = [col for col in df.columns if 'exam' in col.lower()
+                 and ' - Max Points' not in col]
+    exam_cols = [
+        col for col in exam_cols if f"{col} - Max Points" in df.columns]
+    print(f"Auto-detected exam assignments: {exam_cols}")
+
+    # Get all assignments to keep
+    all_assignments = hw_assignments + exam_cols
+
+    # Columns to keep
+    cols_to_keep = ['Email'] + [col for assignment in all_assignments
+                                for col in [assignment, f"{assignment} - Max Points"]]
+
+    # Filter dataframe
+    filtered_df = df[cols_to_keep].copy()
     filtered_df = filtered_df.dropna(how='all')
-    filtered_df = filtered_df.dropna(axis=1, how='all')  # Discuss w/ Prof
+    filtered_df = filtered_df.dropna(axis=1, how='all')
 
-    filtered_df['Exam1'] = np.nan
-    filtered_df['Exam1 - Max Points'] = np.nan
-
-    exam_cols = ['exam1a', 'exam1b', 'exam1c', 'exam1d']
-    max_point_cols = ['exam1a - Max Points', 'exam1b - Max Points',
-                      'exam1c - Max Points', 'exam1d - Max Points']  # Not sure if this exists, but maybe make it a func (generalize how)?
-
-    for i, col in enumerate(exam_cols):
-        mask = filtered_df[col].notna()
-        filtered_df.loc[mask, 'Exam1'] = filtered_df.loc[mask, col]
-        filtered_df.loc[mask,
-                        'Exam1 - Max Points'] = filtered_df.loc[mask, max_point_cols[i]]
-
-    filtered_df = filtered_df.drop(columns=exam_cols + max_point_cols)
-
+    # Calculate weighted scores (as percentage of max points)
     for col in filtered_df.columns:
         if " - Max Points" in col:  # Identify max points columns
             # Get corresponding score column
-            hw_col = col.replace(" - Max Points", "")
-            if hw_col in filtered_df.columns:  # Ensure the score column exists
-                filtered_df[f"Weighted_{hw_col}"] = (
-                    filtered_df[hw_col] / filtered_df[col])*100
+            assignment_col = col.replace(" - Max Points", "")
+            if assignment_col in filtered_df.columns:  # Ensure the score column exists
+                filtered_df[f"Weighted_{assignment_col}"] = (
+                    filtered_df[assignment_col] / filtered_df[col]) * 100
 
     return filtered_df
 
 
-def _cols_to_keep(df, hw_assignments):
-    # generalize how
-    cols_to_keep = [
-        'Email',
-        # 'Hw1', 'Hw1 - Max Points',
-        # 'Hw2', 'Hw2 - Max Points',
-        # 'Hw3', 'Hw3 - Max Points',
-        # 'Hw4', 'Hw4 - Max Points',
-        # 'Hw5', 'Hw5 - Max Points',
-        # 'hw6', 'hw6 - Max Points',
-        'exam1a', 'exam1a - Max Points',
-        'exam1b', 'exam1b - Max Points',
-        'exam1c', 'exam1c - Max Points',
-        'exam1d', 'exam1d - Max Points'
-    ]
+def plot_z_score_histogram(df: pd.DataFrame, z_min: float = -5, z_max: float = 4,
+                           bin_size: float = 0.5, output_file: str = "histogram.html",
+                           title: str = "Histogram of Student Performance Residuals"):
+    """
+    Create and save a histogram of Z-scores with hover information.
 
-    cols_to_keep = cols_to_keep + \
-        [col for hw in hw_assignments for col in [hw, f"{hw} - Max Points"]]
-    return df[cols_to_keep]
-
-
-hw_assignments = ['Hw1', 'Hw2', 'Hw3', 'Hw4', 'Hw5', 'hw6']
-df = clean_raw_csv(
-    "/Users/trymkyvag/Desktop/Northeastern/Spring 25/Research Project -- Prof.Higger/gradescope_mean/real_grades/CS1800.MERGED.202530_Spring_2025_grades-2.csv", hw_assignments)
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        DataFrame containing Z-scores and student emails
+    z_min, z_max : float
+        Min and max Z-score to include in histogram
+    bin_size : float
+        Size of histogram bins
+    output_file : str
+        Path to save HTML output file
+    title : str
+        Title for the histogram
+    """
+    # Filter data to remove extreme outliers
+    filtered_df = df[(df['Z_Score'] >= z_min) & (df['Z_Score'] <= z_max)]
 
 
-results, z_scores = calculate_exam_predictions(df, hw_assignments)
-sorted_res = results[results['Actual_Exam_Score']
-                     != 0].sort_values(by="Z_Score")
+    # Bin Z-scores for hover text grouping
+    filtered_df = filtered_df.copy()
+    filtered_df.loc[:, 'Z_Bin'] = (filtered_df['Z_Score'] // bin_size) * bin_size
 
-# sorted_res = results.sort_values(by="Z_Score")
-# sorted_res = results[results['Actual_Exam_Score']
-#                      != 0].sort_values(by="Z_Score")
-print(sorted_res.head())
+    bin_groups = filtered_df.groupby(['Z_Bin'])[
+        'Email'].apply(list).reset_index()
 
+    # Create figure
+    fig = go.Figure()
 
-df = pd.DataFrame(sorted_res)
-z_min, z_max = -5, 4  
-filtered_df = df[(df['Z_Score'] >= z_min) & (df['Z_Score'] <= z_max)]
-bin_size = 0.5  # Adjust bin size as needed
-filtered_df['Z_Bin'] = (filtered_df['Z_Score'] // bin_size) * bin_size
-bin_groups = filtered_df.groupby('Z_Bin')['Email'].apply(list).reset_index()
+    # Add histogram trace
+    fig.add_trace(go.Histogram(
+        x=filtered_df['Z_Score'],
+        xbins=dict(size=bin_size),
+        marker=dict(color='blue', opacity=0.7),
+        hoverinfo='x+y',
+        name='Z-Score Distribution'
+    ))
 
-fig = go.Figure()
-fig.add_trace(go.Histogram(
-    x=filtered_df['Z_Score'],
-    xbins=dict(size=bin_size),
-    marker=dict(color='blue', opacity=0.7),
-    hoverinfo='x+y',
-    name='Z-Score Distribution'
-))
+    hover_texts = []
+    for _, row in bin_groups.iterrows():
+        z_bin = row['Z_Bin']
+        email_list = '<br>'.join(row['Email'])
+        hover_text = (
+            f"<b>Z-Score Range:</b> {z_bin:.2f} - {z_bin + bin_size:.2f}<br>"
+            f"<b>Students:</b><br>"
+            f"<b>{email_list}</b>"
+        )
+        hover_texts.append((z_bin, hover_text))
 
-hover_texts = []
-for _, row in bin_groups.iterrows():
-    z_bin = row['Z_Bin']
-    email_list = '<br>'.join(row['Email'])
-    hover_text = (
-        f"<b>Z-Score Range:</b> {z_bin:.2f} - {z_bin + bin_size:.2f}<br>"
-        f"<b>Students:</b><br>"
-        f"<b>{email_list}</b>"
+    fig.update_traces(
+        hoverinfo='x+y+text',
+        text=[hover_texts[i][1] if i < len(
+            hover_texts) else '' for i in range(len(filtered_df['Z_Score']))],
+        textposition='none'
     )
-    hover_texts.append((z_bin, hover_text))
 
-fig.update_traces(
-    hoverinfo='x+y+text',
-    text=[hover_texts[i][1] if i < len(hover_texts) else '' for i in range(len(filtered_df['Z_Score']))],
-    textposition='none'
-)
+    fig.update_layout(
+        title=title,
+        xaxis_title='Z Score (Standard Deviations from Predicted)',
+        yaxis_title='Count',
+        hovermode='x unified'
+    )
 
-fig.update_layout(
-    title='Histogram of Students within Z-Score Range',
-    xaxis_title='Z Score',
-    yaxis_title='Count',
-    hovermode='x unified'
-)
-fig.write_html("histogram.html")
+    # Save figure / do we wanna change to where?
+    fig.write_html(output_file)
+    print(f"Histogram saved as {output_file}")
 
-print("Histogram saved as histogram.html")
+    return fig
+
+
+def run_analysis(csv_path: str,
+                 target_assignments: Optional[List[str]] = None,
+                 predictor_assignments: Optional[List[str]] = None,
+                 target_category_name: Optional[str] = None,
+                 predictor_category_name: Optional[str] = None,
+                 auto_detect: bool = True):
+    """
+    Run the full analysis pipeline with clear reporting.
+
+    Parameters:
+    -----------
+    csv_path : str
+        Path to the CSV file
+    target_assignments : Optional[List[str]]
+        List of assignments to predict. If None and auto_detect=True, will use detected exams.
+    predictor_assignments : Optional[List[str]]
+        List of assignments to use as predictors. If None and auto_detect=True, will use detected homeworks.
+    target_category_name : Optional[str]
+        Name for the target category. Defaults to "Exam" if auto-detecting exams.
+    predictor_category_name : Optional[str]
+        Name for the predictor category. Defaults to "Homework" if auto-detecting homeworks.
+    auto_detect : bool
+        Whether to automatically detect assignment categories if not specified
+    """
+    print(f"Loading and cleaning data from {csv_path}")
+    df = clean_raw_csv(csv_path)
+
+    # Detect categories if using auto-detection
+    if auto_detect:
+        categories = detect_assignment_categories(df)
+        print("\nDetected assignment categories:")
+        for category, assignments in categories.items():
+            print(f"  {category.capitalize()}: {assignments}")
+
+    # Use detected categories if not specified
+    if target_assignments is None and auto_detect:
+        target_assignments = categories['exams']
+        if not target_category_name:
+            target_category_name = "Exam"
+
+    if predictor_assignments is None and auto_detect:
+        predictor_assignments = categories['homeworks']
+        if not predictor_category_name:
+            predictor_category_name = "Homework"
+
+    if not target_assignments:
+        raise ValueError("No target assignments specified or detected")
+
+    # Set default category names if not provided
+    if not target_category_name:
+        target_category_name = "Target"
+    if not predictor_category_name:
+        predictor_category_name = "Predictor"
+
+    # Run prediction
+    results, z_scores = calculate_predictions(
+        df,
+        target_assignments,
+        predictor_assignments,
+        target_category_name,
+        predictor_category_name
+    )
+
+    # Plot histogram
+    if not results.empty:
+        title = f"Prediction Residuals: {target_category_name} from {predictor_category_name}"
+        plot_z_score_histogram(results, title=title)
+
+    return df, results, z_scores
+
+
+# Example usage
+if __name__ == "__main__":
+    csv_path = "path"
+
+    # Option 1: Auto-detect assignments and categories
+    df, results, z_scores = run_analysis(csv_path, auto_detect=True)
+
+    # Option 2: Explicitly specify everything
+    # df, results, z_scores = run_analysis(
+    #     csv_path,
+    #     target_assignments=["Exam1", "Exam2"],
+    #     predictor_assignments=["Hw1", "Hw2", "Hw3", "Hw4"],
+    #     target_category_name="Exams",
+    #     predictor_category_name="Homework Assignments",
+    #     auto_detect=False
+    # )
