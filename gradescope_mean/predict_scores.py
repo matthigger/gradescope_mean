@@ -33,8 +33,6 @@ def calculate_predictions(df: pd.DataFrame,
     z_scores : np.ndarray
         Z-scores for all predictions
     '''
-    print(f"\n===== Estimating {target_category_name} ({', '.join(target_assignments)}) " +
-          f"from {predictor_category_name} ({', '.join(predictor_assignments or [])}) =====")
 
     # Extract emails for output
     emails = df['Email'].values
@@ -45,21 +43,16 @@ def calculate_predictions(df: pd.DataFrame,
             col for col in df.columns if col.startswith('Weighted_')]
         predictor_assignments = [col.replace('Weighted_', '') for col in weighted_cols
                                  if col.replace('Weighted_', '') not in target_assignments]
-        print(
-            f"No predictors specified, using all available: {predictor_assignments}")
 
     target_cols = [f"Weighted_{hw}" for hw in target_assignments]
     predictor_cols = [f"Weighted_{hw}" for hw in predictor_assignments]
 
-    # Extract feature matrix and target vector 
+    # Extract feature matrix and target vector
     x = df[predictor_cols].values
 
     # Handle NaN values in predictor scores: set them to 0 since we mask them
     for col_idx in range(len(predictor_cols)):
         mask = np.isnan(x[:, col_idx])
-        if np.any(mask):
-            print(
-                f"Note: {sum(mask)} missing values in {predictor_cols[col_idx]} set to 0")
         x[mask, col_idx] = 0
 
     # Initialize results storage
@@ -71,9 +64,6 @@ def calculate_predictions(df: pd.DataFrame,
         y = df[target_col].values
 
         missing_mask = np.isnan(y)
-        if np.any(missing_mask):
-            print(
-                f"Skipping {sum(missing_mask)} students with missing {target_col} scores")
 
         # Filter to only students with valid target scores (they took exam)
         valid_indices = ~missing_mask
@@ -82,7 +72,6 @@ def calculate_predictions(df: pd.DataFrame,
         valid_y = y[valid_indices]
 
         if len(valid_y) == 0:
-            print(f"No valid scores for {target_col}, skipping")
             continue
 
         # Append bias column of ones to x
@@ -104,21 +93,6 @@ def calculate_predictions(df: pd.DataFrame,
             'z_scores': z,
             'r2': r2
         }
-
-        print(
-            f"\nPrediction for {target_assignments[target_idx]} (R² = {r2:.2f}):")
-        print(
-            f"  Sample predictions: Actual: {valid_y[:3]} | Predicted: {y_hat[:3]}")
-
-        z_abs = np.abs(z)
-        sorted_indices = np.argsort(z_abs)[::-1]
-
-        print(f"\nTop outliers for {target_assignments[target_idx]}:")
-        for i in range(min(3, len(sorted_indices))):
-            idx = sorted_indices[i]
-            direction = "+" if z[idx] > 0 else "-"
-            print(
-                f"  {direction}{abs(z[idx]):.1f} std dev: {valid_emails[idx]}")
 
         for i in range(len(valid_emails)):
             all_results.append({
@@ -193,14 +167,12 @@ def clean_raw_csv(csv_path: str, hw_assignments: Optional[List[str]] = None) -> 
             col for col in df.columns if 'hw' in col.lower() and ' - Max Points' not in col]
         hw_assignments = [
             col for col in possible_hw_cols if f"{col} - Max Points" in df.columns]
-        print(f"Auto-detected homework assignments: {hw_assignments}")
 
     # Detect exam columns
     exam_cols = [col for col in df.columns if 'exam' in col.lower()
                  and ' - Max Points' not in col]
     exam_cols = [
         col for col in exam_cols if f"{col} - Max Points" in df.columns]
-    print(f"Auto-detected exam assignments: {exam_cols}")
 
     # Get all assignments to keep
     all_assignments = hw_assignments + exam_cols
@@ -248,10 +220,10 @@ def plot_z_score_histogram(df: pd.DataFrame, z_min: float = -5, z_max: float = 4
     # Filter data to remove extreme outliers
     filtered_df = df[(df['Z_Score'] >= z_min) & (df['Z_Score'] <= z_max)]
 
-
     # Bin Z-scores for hover text grouping
     filtered_df = filtered_df.copy()
-    filtered_df.loc[:, 'Z_Bin'] = (filtered_df['Z_Score'] // bin_size) * bin_size
+    filtered_df.loc[:, 'Z_Bin'] = (
+        filtered_df['Z_Score'] // bin_size) * bin_size
 
     bin_groups = filtered_df.groupby(['Z_Bin'])[
         'Email'].apply(list).reset_index()
@@ -295,7 +267,6 @@ def plot_z_score_histogram(df: pd.DataFrame, z_min: float = -5, z_max: float = 4
 
     # Save figure / do we wanna change to where?
     fig.write_html(output_file)
-    print(f"Histogram saved as {output_file}")
 
     return fig
 
@@ -324,15 +295,11 @@ def run_analysis(csv_path: str,
     auto_detect : bool
         Whether to automatically detect assignment categories if not specified
     """
-    print(f"Loading and cleaning data from {csv_path}")
     df = clean_raw_csv(csv_path)
 
     # Detect categories if using auto-detection
     if auto_detect:
         categories = detect_assignment_categories(df)
-        print("\nDetected assignment categories:")
-        for category, assignments in categories.items():
-            print(f"  {category.capitalize()}: {assignments}")
 
     # Use detected categories if not specified
     if target_assignments is None and auto_detect:
@@ -375,14 +342,15 @@ if __name__ == "__main__":
     csv_path = "path"
 
     # Option 1: Auto-detect assignments and categories
-    df, results, z_scores = run_analysis(csv_path, auto_detect=True)
-
+    # df, results, z_scores = run_analysis(csv_path, auto_detect=True)
+    # print("s")
     # Option 2: Explicitly specify everything
-    # df, results, z_scores = run_analysis(
-    #     csv_path,
-    #     target_assignments=["Exam1", "Exam2"],
-    #     predictor_assignments=["Hw1", "Hw2", "Hw3", "Hw4"],
-    #     target_category_name="Exams",
-    #     predictor_category_name="Homework Assignments",
-    #     auto_detect=False
-    # )
+    df, results, z_scores = run_analysis(
+        csv_path,
+        target_assignments=["exam1a", "exam1b"],  # , "Exam2"],
+        predictor_assignments=["hw1", "hw2", "hw3", "hw4"],
+        target_category_name="Exams",
+        predictor_category_name="Homework Assignments",
+        auto_detect=False
+    )
+    print("s")
