@@ -46,7 +46,7 @@ def predict(df, ass_target, ass_predict=None):
     if ass_predict is not None:
         # use matching features
         ass_predict_list = list(ass_list.match_iter(ass_predict))
-        df_x = df[:, ass_predict_list]
+        df_x = df[ass_predict_list]
     else:
         # use all features
         df_x = df
@@ -55,7 +55,8 @@ def predict(df, ass_target, ass_predict=None):
     df_x.insert(0, 'bias', 1)
 
     # don't use target feature as a predictor!
-    df_x = df_x.drop(ass_target, axis=1)
+    if ass_target in df_x.columns:
+        df_x = df_x.drop(ass_target, axis=1)
 
     # extract values for linear algebra
     x = df_x.values
