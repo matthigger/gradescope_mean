@@ -7,3 +7,5 @@
 /.pytest_cache/
 /gradescope_auto_py.egg-info/
 /venv/
+/real_grades/
+/tryms_local/
