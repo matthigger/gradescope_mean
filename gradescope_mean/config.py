@@ -73,15 +73,16 @@ class Config:
 
         self.remove_list = [normalize(a) for a in self.remove_list]
 
-        self.sub_dict = {normalize(s0): normalize(s1)
-                         for s0, s1 in self.sub_dict.items()}
+        self.sub_dict = {normalize(s0): list(map(normalize, s1_list))
+                         for s0, s1_list in self.sub_dict.items()}
 
-        self.waive_dict = {email: [normalize(a) for a in a_list]
+        self.waive_dict = {email: [normalize(a) for a in a_list.split(',')]
                            for email, a_list in self.waive_dict.items()}
 
         self.cat_late_dict = {normalize(c): l
                               for c, l in self.cat_late_dict.items()}
-        self.late_waive_dict = {email: [normalize(a) for a in a_list]
+        self.late_waive_dict = {email: [normalize(a) for a in a_list.split(
+            ',')]
                                 for email, a_list in
                                 self.late_waive_dict.items()}
 
@@ -106,7 +107,8 @@ class Config:
         for ass in self.remove_list:
             gradebook.remove(ass, multi=True)
 
-        gradebook.remove_thresh(min_complete_thresh=self.exclude_complete_thresh)
+        gradebook.remove_thresh(
+            min_complete_thresh=self.exclude_complete_thresh)
 
         if self.waive_dict:
             gradebook.waive(waive_dict=self.waive_dict)

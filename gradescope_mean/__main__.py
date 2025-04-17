@@ -18,6 +18,11 @@ parser.add_argument('--plot', dest='f_hist', action='store',
                     default=None,
                     help='html of histogram plot per assignment category ('
                          'none generated if no html output file specified)')
+parser.add_argument('--pca', dest='f_pca', action='store',
+                    default=None,
+                    help='html of principal component analysis on student'
+                         'scores (none generated if no html output file '
+                         'specified)')
 parser.add_argument('--late_csv', dest='f_late_csv', action='store',
                     default=None,
                     help='csv of late days applied per assignment')
@@ -57,13 +62,31 @@ def main(args=None):
         f_late = folder / args.f_late_csv
         gradebook.df_lateday.to_csv(f_late.with_suffix('.csv'))
 
-    # plot
+    # plot histogram (per category)
     if args.f_hist:
         fig = gradescope_mean.plot_hist(df_grade_full=df_grade_full,
                                         cat_weight_dict=config.cat_weight_dict)
         f_html = folder / args.f_hist
         fig.write_html(str(f_html), include_plotlyjs='cdn')
 
+    # plot pca scatter
+    if args.f_pca:
+        point_dict = dict(zip(gradebook.ass_list,
+                              gradebook.points))
+        fig = gradescope_mean.plot_pca(df_grade_full=df_grade_full,
+                                       cat_weight_dict=config.cat_weight_dict,
+                                       point_dict=point_dict)
+        f_pca = folder / args.f_pca
+        fig.write_html(str(f_pca), include_plotlyjs='cdn')
+
 
 if __name__ == '__main__':
+    # # tmp: testing ariel's issue feb 24 2025
+    # cmd_line = ['/home/matt/Downloads/scope2.csv',
+    #             '--config',
+    #             '/home/matt/Downloads/config.yaml',
+    #             '--pca',
+    #             '/home/matt/Downloads/pca.html']
+    # main(parser.parse_args(cmd_line))
+
     main()

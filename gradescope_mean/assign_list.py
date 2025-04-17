@@ -1,3 +1,6 @@
+import warnings
+
+
 class AssignmentNotFoundError(NameError):
     pass
 
@@ -13,16 +16,28 @@ class AssignmentList(list):
     the keys of the dictionary are the normalized names, the values are the
     full names.
     """
-    MAX_PTS = ' - max points'
-    LATE = ' - lateness (h:m:s)'
+    MAX_PTS = normalize(' - max points')
+    LATE = normalize(' - lateness (h:m:s)')
 
-    def __init__(self, columns):
-        ass_list = [col.replace(self.MAX_PTS, '') for col in columns
-                    if self.MAX_PTS in col]
+    def __init__(self, ass_list):
+        # normalize
         ass_norm_list = [normalize(ass) for ass in ass_list]
+        ass_norm_list = [ass.replace(self.MAX_PTS, '') for ass in ass_norm_list
+                         if self.MAX_PTS in ass]
         assert len(ass_norm_list) == len(set(ass_norm_list)), \
             'two assignment names differ by only capitalization or spacing'
-        super().__init__(sorted(ass_list))
+
+        _ass_norm_list = sorted(ass_norm_list, key=len)
+        link = 'https://github.com/matthigger/gradescope_mean/issues/28'
+        for i, ass in enumerate(_ass_norm_list):
+            for _ass in _ass_norm_list[i:]:
+                if _ass.startswith(ass):
+                    warnings.warn(f'{ass} prefixes {_ass}, youll have '
+                                  f'trouble referencing {ass}\n{link}',
+                                  UserWarning)
+
+        super().__init__(sorted(ass_norm_list))
+
 
     def match_iter(self, s_assign):
         """ iterates through all matching assignments
@@ -36,7 +51,7 @@ class AssignmentList(list):
         ass_search_norm = normalize(s_assign)
 
         for ass in self:
-            if ass_search_norm in normalize(ass):
+            if ass_search_norm in ass:
                 yield ass
 
     def match(self, s_assign):
