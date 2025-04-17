@@ -1,3 +1,6 @@
+import warnings
+
+
 class AssignmentNotFoundError(NameError):
     pass
 
@@ -23,7 +26,18 @@ class AssignmentList(list):
                          if self.MAX_PTS in ass]
         assert len(ass_norm_list) == len(set(ass_norm_list)), \
             'two assignment names differ by only capitalization or spacing'
+
+        _ass_norm_list = sorted(ass_norm_list, key=len)
+        link = 'https://github.com/matthigger/gradescope_mean/issues/28'
+        for i, ass in enumerate(_ass_norm_list):
+            for _ass in _ass_norm_list[i:]:
+                if _ass.startswith(ass):
+                    warnings.warn(f'{ass} prefixes {_ass}, youll have '
+                                  f'trouble referencing {ass}\n{link}',
+                                  UserWarning)
+
         super().__init__(sorted(ass_norm_list))
+
 
     def match_iter(self, s_assign):
         """ iterates through all matching assignments

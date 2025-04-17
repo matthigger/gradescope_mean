@@ -18,6 +18,10 @@ class TestAssignmentList:
         ass_list_exp = ['hw1', 'hw2']
         assert ass_list == ass_list_exp
 
+    with pytest.warns():
+        AssignmentList(['hw1', 'hw10', 'hw_another'],
+                       require_max_pts=False)
+
     def test_match(self, ass_list):
         ass_list.match('  hw1  ') == 'hw1'
 
