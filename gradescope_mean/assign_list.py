@@ -30,7 +30,7 @@ class AssignmentList(list):
         _ass_norm_list = sorted(ass_norm_list, key=len)
         link = 'https://github.com/matthigger/gradescope_mean/issues/28'
         for i, ass in enumerate(_ass_norm_list):
-            for _ass in _ass_norm_list[i:]:
+            for _ass in _ass_norm_list[i + 1:]:
                 if _ass.startswith(ass):
                     warnings.warn(f'{ass} prefixes {_ass}, youll have '
                                   f'trouble referencing {ass}\n{link}',
