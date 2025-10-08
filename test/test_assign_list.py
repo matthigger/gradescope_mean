@@ -19,8 +19,8 @@ class TestAssignmentList:
         assert ass_list == ass_list_exp
 
     with pytest.warns():
-        AssignmentList(['hw1', 'hw10', 'hw_another'],
-                       require_max_pts=False)
+        l = [AssignmentList.MAX_PTS + s for s in ('hw1', 'hw10', 'hw_another')]
+        AssignmentList(l)
 
     def test_match(self, ass_list):
         ass_list.match('  hw1  ') == 'hw1'
