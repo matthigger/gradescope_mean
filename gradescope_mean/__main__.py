@@ -53,8 +53,8 @@ def main(args=None):
         _folder.mkdir(exist_ok=True)
         for idx, row in df_grade_full.iterrows():
             _df = pd.DataFrame(row)
-            last = row['last name']
-            first = row['first name']
+            last = row['lastname']
+            first = row['firstname']
             _df.to_csv(_folder / f'{last}_{first}.csv')
 
     # print late days to csv
@@ -81,12 +81,13 @@ def main(args=None):
 
 
 if __name__ == '__main__':
-    # # tmp: testing ariel's issue feb 24 2025
-    # cmd_line = ['/home/matt/Downloads/scope2.csv',
-    #             '--config',
-    #             '/home/matt/Downloads/config.yaml',
-    #             '--pca',
-    #             '/home/matt/Downloads/pca.html']
+    # import pathlib
+    # folder = pathlib.Path('/home/matt/Dropbox/teach/DS4400/admin/grade')
+    # f_scope =  folder / 'scope_oct27.csv'
+    # f_config = folder / 'config.yaml'
+    # cmd_line = [str(f_scope),
+    #             '--config', str(f_config),
+    #             '--per_student']
     # main(parser.parse_args(cmd_line))
 
     main()
