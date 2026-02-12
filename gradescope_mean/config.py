@@ -57,7 +57,10 @@ class Config:
         else:
             self.late_waive_dict = late_waive_dict
 
-        self.exclude_complete_thresh = exclude_complete_thresh
+        if exclude_complete_thresh is None:
+            self.exclude_complete_thresh = 0
+        else:
+            self.exclude_complete_thresh = exclude_complete_thresh
         self.grade_thresh = grade_thresh
 
         self._normalize()

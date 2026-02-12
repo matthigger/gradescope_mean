@@ -147,7 +147,39 @@ class TestGradebook:
         assert df_grade.loc['last3@nu.edu', 'mean'] == 1
 
     def test_average_full(self, gradebook):
-        gradebook.average_full()
+        df_full = gradebook.average_full()
+
+        # should contain meta columns, grade columns, and percentage columns
+        assert 'firstname' in df_full.columns
+        assert 'lastname' in df_full.columns
+        assert 'mean' in df_full.columns
+        assert 'letter' in df_full.columns
+        assert 'hw1' in df_full.columns
+        assert df_full.shape[0] == 5
+
+    def test_remove_thresh(self, gradebook):
+        # all assignments have 100% completion in test data; thresh=0 removes
+        # nothing (completeness is > 0 for all)
+        n_before = len(gradebook.ass_list)
+        gradebook.remove_thresh(min_complete_thresh=0)
+        assert len(gradebook.ass_list) == n_before
+
+    def test_remove_thresh_high(self, gradebook):
+        # waive hw1 for all students so it has 0% completion, then set high
+        # threshold
+        for email in gradebook.df_perc.index:
+            gradebook.df_perc.loc[email, 'hw1'] = 0
+        gradebook.remove_thresh(min_complete_thresh=0.5)
+        assert 'hw1' not in gradebook.ass_list
+
+    def test_get_late_penalty_negative_raises(self, gradebook):
+        with pytest.raises(AttributeError):
+            gradebook.get_late_penalty(cat='hw1', penalty_per_day=-0.1)
+
+    def test_waive_nonexistent_warns(self, gradebook):
+        waive_dict = {'last0@nu.edu': ['nonexistent_hw']}
+        with pytest.warns(UserWarning, match='waive-fail'):
+            gradebook.waive(waive_dict)
 
     def test_prune_email(self, gradebook):
         email_list = ['last0@nu.edu', 'not-in-list@nu.edu']
@@ -161,3 +193,10 @@ class TestGradebook:
         email_list = ['last0@gmail.com']
         gradebook.prune_email(email_list, ignore_suffix=True)
         assert gradebook.df_perc.shape[0] == 1
+
+    def test_prune_email_no_ignore_suffix(self, gradebook):
+        email_list = ['last0@nu.edu', 'last1@nu.edu']
+        gradebook.prune_email(email_list, ignore_suffix=False)
+        assert gradebook.df_perc.shape[0] == 2
+        assert gradebook.df_meta.shape[0] == 2
+        assert gradebook.df_lateday.shape[0] == 2
