@@ -149,9 +149,12 @@ class Config:
         else:
             grade_thresh = None
 
+        late_waive_dict = d.get('waive_late', None)
+
         return cls(cat_weight_dict, cat_drop_n, exclude_list, sub_dict,
                    waive_dict, email_list, cat_late_dict,
-                   exclude_complete_thresh, grade_thresh=grade_thresh)
+                   exclude_complete_thresh, grade_thresh=grade_thresh,
+                   late_waive_dict=late_waive_dict)
 
     @classmethod
     def cli_copy_config(cls, folder):
