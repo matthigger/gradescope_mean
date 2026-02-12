@@ -45,4 +45,4 @@ def perc_to_letter(perc, grade_thresh=None, float_bonus=1e-8,
         if perc + float_bonus >= thresh:
             return mark
 
-    raise
+    raise ValueError(f'no grade threshold matched for perc={perc}')
