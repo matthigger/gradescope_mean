@@ -1,53 +1,130 @@
 #!/usr/bin/env python3
 
 import argparse
+import logging
 import pathlib
+import sys
 
 import pandas as pd
 
 import gradescope_mean
 
+logger = logging.getLogger('gradescope_mean')
+
+# ---------- top-level parser ----------
 parser = argparse.ArgumentParser(
-    description='grade synthesis from gradescope (see doc at: https://github.com/matthigger/gradescope_mean/blob/main/readme.md)')
-parser.add_argument('f_scope', type=str,
-                    help='gradescope output csv (Assignments > Download Grades > CSV)')
-parser.add_argument('--config', dest='f_config', action='store',
-                    default=None,
-                    help='yaml configuration (see doc at: https://github.com/matthigger/gradescope_mean/blob/main/doc/config.md)')
-parser.add_argument('--plot', dest='f_hist', action='store',
-                    default=None,
-                    help='html of histogram plot per assignment category ('
-                         'none generated if no html output file specified)')
-parser.add_argument('--pca', dest='f_pca', action='store',
-                    default=None,
-                    help='html of principal component analysis on student'
-                         'scores (none generated if no html output file '
-                         'specified)')
-parser.add_argument('--late_csv', dest='f_late_csv', action='store',
-                    default=None,
-                    help='csv of late days applied per assignment')
-parser.add_argument('--per_student', dest='per_stud', action='store_true',
-                    help='outputs csv per student')
+    prog='gradescope-mean',
+    description='Grade synthesis from Gradescope CSV exports. '
+                'See: https://github.com/matthigger/gradescope_mean')
+parser.add_argument('--version', action='version',
+                    version=f'%(prog)s {gradescope_mean.__version__}')
+subparsers = parser.add_subparsers(dest='command')
+
+# ---------- "grade" subcommand (default / main workflow) ----------
+grade_parser = subparsers.add_parser(
+    'grade',
+    help='compute final grades from a Gradescope CSV export')
+grade_parser.add_argument(
+    'f_scope', type=str,
+    help='Gradescope CSV (Assignments > Download Grades > CSV)')
+grade_parser.add_argument(
+    '--config', dest='f_config', default=None,
+    help='YAML configuration file. If omitted and config.yaml exists in the '
+         'same directory as the CSV it will be used; otherwise the default '
+         'config is copied there. Use --new-config to force a fresh copy.')
+grade_parser.add_argument(
+    '--new-config', dest='new_config', action='store_true',
+    help='force creation of a fresh default config.yaml (ignores existing)')
+grade_parser.add_argument(
+    '-o', '--output', dest='f_output', default=None,
+    help='output CSV path (default: grade_full.csv in same directory as '
+         'the Gradescope CSV)')
+grade_parser.add_argument(
+    '--plot', dest='f_hist', nargs='?', const='hist.html', default=None,
+    help='generate histogram HTML per assignment category '
+         '(default filename: hist.html)')
+grade_parser.add_argument(
+    '--pca', dest='f_pca', nargs='?', const='pca.html', default=None,
+    help='generate PCA scatter plot HTML '
+         '(default filename: pca.html)')
+grade_parser.add_argument(
+    '--late_csv', dest='f_late_csv', default=None,
+    help='output CSV of late days per student-assignment pair')
+grade_parser.add_argument(
+    '--per_student', dest='per_stud', action='store_true',
+    help='output a CSV per student into a per_student/ folder')
+grade_parser.add_argument(
+    '-q', '--quiet', action='store_true',
+    help='suppress informational output')
+
+# ---------- "canvas" subcommand ----------
+canvas_parser = subparsers.add_parser(
+    'canvas',
+    help='prepare grade CSV for Canvas upload '
+         '(see: https://github.com/matthigger/gradescope_mean/blob/main/doc'
+         '/upload_canvas.md)')
+canvas_parser.add_argument(
+    'grade_full', type=str,
+    help='output CSV of "gradescope-mean grade" command')
+canvas_parser.add_argument(
+    'canvas', type=str,
+    help='CSV of grades downloaded from Canvas')
+canvas_parser.add_argument(
+    '--scale100', action='store_true',
+    help='scale output by 100 (grades between 0-100) to avoid Canvas '
+         'rounding ambiguity')
+canvas_parser.add_argument(
+    '-q', '--quiet', action='store_true',
+    help='suppress informational output')
+
+# ---------- "banner" subcommand ----------
+banner_parser = subparsers.add_parser(
+    'banner',
+    help='prepare Excel file for Banner upload '
+         '(see: https://github.com/matthigger/gradescope_mean/blob/main/doc'
+         '/upload_banner.md)')
+banner_parser.add_argument(
+    'grade_full', type=str,
+    help='output CSV of "gradescope-mean grade" command')
+banner_parser.add_argument(
+    'term_code', type=str,
+    help='Banner term code (added as a new column)')
+banner_parser.add_argument(
+    '-c', '--crn', action='append', dest='crn_list',
+    help='CRN of course section (may be passed multiple times)')
+banner_parser.add_argument(
+    '-q', '--quiet', action='store_true',
+    help='suppress informational output')
 
 
-def main(args=None):
-    if args is None:
-        args = parser.parse_args()
+def _setup_logging(quiet):
+    """Configure logging level based on --quiet flag."""
+    level = logging.WARNING if quiet else logging.INFO
+    logging.basicConfig(level=level, format='%(message)s', force=True)
 
-    # load config
+
+def cmd_grade(args):
+    """Execute the 'grade' subcommand."""
+    _setup_logging(args.quiet)
+
     folder = pathlib.Path(args.f_scope).resolve().parent
-    if args.f_config is None:
-        config = gradescope_mean.Config.cli_copy_config(folder)
-    else:
+
+    # --- config resolution (non-interactive) ---
+    if args.f_config is not None:
         config = gradescope_mean.Config.from_file(args.f_config)
+    else:
+        config = gradescope_mean.Config.resolve_config(
+            folder, force_new=args.new_config)
 
     # process
     gradebook, df_grade_full = config(f_scope=args.f_scope)
 
     # output
-    df_grade_full.to_csv(str(folder / 'grade_full.csv'))
+    f_output = args.f_output or str(folder / 'grade_full.csv')
+    df_grade_full.to_csv(f_output)
+    logger.info(f'wrote {f_output}')
 
-    # outputs csv per student
+    # per-student CSVs
     if args.per_stud:
         _folder = folder / 'per_student'
         _folder.mkdir(exist_ok=True)
@@ -56,38 +133,92 @@ def main(args=None):
             last = row['lastname']
             first = row['firstname']
             _df.to_csv(_folder / f'{last}_{first}.csv')
+        logger.info(f'wrote per-student CSVs to {_folder}')
 
-    # print late days to csv
+    # late days CSV
     if args.f_late_csv is not None:
         f_late = folder / args.f_late_csv
         gradebook.df_lateday.to_csv(f_late.with_suffix('.csv'))
+        logger.info(f'wrote {f_late}')
 
-    # plot histogram (per category)
+    # histogram
     if args.f_hist:
-        fig = gradescope_mean.plot_hist(df_grade_full=df_grade_full,
-                                        cat_weight_dict=config.cat_weight_dict)
+        fig = gradescope_mean.plot_hist(
+            df_grade_full=df_grade_full,
+            cat_weight_dict=config.cat_weight_dict)
         f_html = folder / args.f_hist
         fig.write_html(str(f_html), include_plotlyjs='cdn')
+        logger.info(f'wrote {f_html}')
 
-    # plot pca scatter
+    # PCA scatter
     if args.f_pca:
-        point_dict = dict(zip(gradebook.ass_list,
-                              gradebook.points))
-        fig = gradescope_mean.plot_pca(df_grade_full=df_grade_full,
-                                       cat_weight_dict=config.cat_weight_dict,
-                                       point_dict=point_dict)
+        point_dict = dict(zip(gradebook.ass_list, gradebook.points))
+        fig = gradescope_mean.plot_pca(
+            df_grade_full=df_grade_full,
+            cat_weight_dict=config.cat_weight_dict,
+            point_dict=point_dict)
         f_pca = folder / args.f_pca
         fig.write_html(str(f_pca), include_plotlyjs='cdn')
+        logger.info(f'wrote {f_pca}')
+
+
+def cmd_canvas(args):
+    """Execute the 'canvas' subcommand."""
+    _setup_logging(args.quiet)
+
+    from datetime import datetime
+
+    df_grade_full = pd.read_csv(args.grade_full)
+    df_canvas_out = gradescope_mean.canvas_merge(
+        f_canvas=args.canvas,
+        df_grade=df_grade_full,
+        rm_gradescope_meta=True,
+        scale100=args.scale100)
+
+    timestamp = datetime.now().strftime('%b%d_%H%M')
+    f_canvas_out = args.canvas.replace('.csv', f'{timestamp}.csv')
+    df_canvas_out.to_csv(f_canvas_out, index=False)
+    logger.info(f'wrote {f_canvas_out}')
+
+
+def cmd_banner(args):
+    """Execute the 'banner' subcommand."""
+    _setup_logging(args.quiet)
+
+    from datetime import datetime
+
+    df = pd.read_csv(args.grade_full)
+    df['Term Code'] = args.term_code
+
+    if args.crn_list:
+        for idx, crn in enumerate(args.crn_list):
+            df[f'CRN{idx}'] = crn
+
+    # modify student ID to banner format
+    df['Student ID'] = df['sid'].map(lambda x: str(x).strip('S').zfill(9))
+    del df['sid']
+
+    timestamp = datetime.now().strftime('%b%d_%H%M')
+    f_out = args.grade_full.replace('.csv', f'_banner_{timestamp}.xlsx')
+    df.to_excel(f_out, index=False)
+    logger.info(f'wrote {f_out}')
+
+
+def main(args=None):
+    if args is None:
+        args = parser.parse_args()
+
+    if args.command is None:
+        parser.print_help()
+        sys.exit(1)
+
+    dispatch = {
+        'grade': cmd_grade,
+        'canvas': cmd_canvas,
+        'banner': cmd_banner,
+    }
+    dispatch[args.command](args)
 
 
 if __name__ == '__main__':
-    # import pathlib
-    # folder = pathlib.Path('/home/matt/Dropbox/teach/DS4400/admin/grade')
-    # f_scope =  folder / 'scope_oct27.csv'
-    # f_config = folder / 'config.yaml'
-    # cmd_line = [str(f_scope),
-    #             '--config', str(f_config),
-    #             '--per_student']
-    # main(parser.parse_args(cmd_line))
-
     main()

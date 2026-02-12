@@ -160,32 +160,48 @@ class Config:
                    late_waive_dict=late_waive_dict)
 
     @classmethod
-    def cli_copy_config(cls, folder):
-        """ copies default config file to folder, uses existing local if user wants
+    def resolve_config(cls, folder, force_new=False):
+        """Resolve config: use existing config.yaml or copy default.
+
+        Non-interactive replacement for the old cli_copy_config. When no
+        --config is specified:
+          - If config.yaml exists in *folder* and force_new is False, use it.
+          - Otherwise copy the default config.yaml into *folder* and use that.
+          - If force_new and config.yaml already exists, it is timestamped to
+            avoid overwriting.
+
+        Args:
+            folder (pathlib.Path): directory to look for / place config
+            force_new (bool): if True, always create a fresh config
         """
-        # default config location
+        import logging
+        logger = logging.getLogger('gradescope_mean')
+
         f_config = pathlib.Path(folder) / F_CONFIG_DEFAULT.name
 
-        if f_config.exists():
-            # if config already exists, ask if it should be used
-            print(f'local config exists: {f_config.resolve()}')
-            while True:
-                s = input('use [e]xisting config or create [n]ew config?')
-                if s == 'e':
-                    # use existing config
-                    return cls.from_file(f_config)
-                elif s == 'n':
-                    # create new config
-                    s_now = datetime.now().strftime('_%Y_%b_%d@%H:%M:%S')
-                    f_config = str(f_config).replace('.yaml', f'{s_now}.yaml')
-                    f_config = pathlib.Path(f_config)
-                    break
-                print('invalid input')
+        if f_config.exists() and not force_new:
+            logger.info(f'using existing config: {f_config.resolve()}')
+            return cls.from_file(f_config)
 
-        # copy config
+        # need to create a new config
+        if f_config.exists():
+            # don't overwrite — timestamp the new one
+            s_now = datetime.now().strftime('_%Y_%b_%d@%H:%M:%S')
+            f_config = pathlib.Path(
+                str(f_config).replace('.yaml', f'{s_now}.yaml'))
+
         shutil.copy(F_CONFIG_DEFAULT, f_config)
-        print(f'using new copy of default config file.  see '
-              f'https://github.com/matthigger/gradescope_mean/blob/main/doc'
-              f'/config.md for details:\n {f_config}')
+        logger.info(
+            f'created default config — edit as needed, see '
+            f'https://github.com/matthigger/gradescope_mean/blob/main/doc'
+            f'/config.md for details:\n  {f_config}')
 
         return cls.from_file(f_config)
+
+    @classmethod
+    def cli_copy_config(cls, folder):
+        """Deprecated: use resolve_config instead."""
+        import warnings
+        warnings.warn('cli_copy_config is deprecated, use resolve_config',
+                      DeprecationWarning, stacklevel=2)
+        return cls.resolve_config(folder)
