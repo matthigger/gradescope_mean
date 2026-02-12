@@ -17,7 +17,7 @@ class Config:
                  email_list=None, cat_late_dict=None,
                  exclude_complete_thresh=0, grade_thresh=None,
                  late_waive_dict=None):
-        if cat_late_dict is None:
+        if cat_weight_dict is None:
             self.cat_weight_dict = dict()
         else:
             self.cat_weight_dict = cat_weight_dict
