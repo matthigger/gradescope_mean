@@ -19,11 +19,14 @@ class AssignmentList(list):
     MAX_PTS = normalize(' - max points')
     LATE = normalize(' - lateness (h:m:s)')
 
-    def __init__(self, ass_list):
+    def __init__(self, ass_list, require_max_pts=True):
         # normalize
         ass_norm_list = [normalize(ass) for ass in ass_list]
-        ass_norm_list = [ass.replace(self.MAX_PTS, '') for ass in ass_norm_list
-                         if self.MAX_PTS in ass]
+        if require_max_pts:
+            # only strings which contain MAX_PTS are included
+            ass_norm_list = [ass.replace(self.MAX_PTS, '')
+                             for ass in ass_norm_list
+                             if self.MAX_PTS in ass]
         assert len(ass_norm_list) == len(set(ass_norm_list)), \
             'two assignment names differ by only capitalization or spacing'
 
