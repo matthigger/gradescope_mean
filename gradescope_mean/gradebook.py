@@ -35,7 +35,7 @@ class Gradebook:
                 continue
             df_scope.iloc[:, idx] = df_scope.iloc[:, idx].astype(str).map(
                 str.lower)
-        df_scope.index.map(str.lower)
+        df_scope.index = df_scope.index.map(str.lower)
         df_scope.index.name = df_scope.index.name.lower()
         df_scope.fillna(0, inplace=True)
 
@@ -56,15 +56,57 @@ class Gradebook:
             # percentage per assignment
             self.df_perc[ass] = df_scope[ass] / df_scope[ass_max_pt]
 
-        # compute days late
-        def get_days_late(s_hour_min_sec):
-            # grace period of 1 hour built in (we ignore min / sec)
-            return ceil(float(s_hour_min_sec.split(':')[0]) / 24)
+        # compute days late (raw minutes; grace period applied later)
+        def get_late_minutes(s_hour_min_sec):
+            """ returns total lateness in minutes (ignoring seconds) """
+            parts = s_hour_min_sec.split(':')
+            return int(parts[0]) * 60 + int(parts[1])
 
-        self.df_lateday = pd.DataFrame()
+        self.df_late_minutes = pd.DataFrame()
         for ass in self.ass_list:
             ass_late = ass + self.ass_list.LATE
-            self.df_lateday[ass] = df_scope[ass_late].map(get_days_late)
+            self.df_late_minutes[ass] = df_scope[ass_late].map(
+                get_late_minutes)
+
+        # legacy df_lateday: default 60-min grace, computed on demand via
+        # _compute_lateday
+        self.df_lateday = self._compute_lateday(grace_period_minutes=60)
+
+    def _compute_lateday(self, grace_period_minutes=60):
+        """Convert raw late-minutes to late-days with a grace period.
+
+        Args:
+            grace_period_minutes (int): minutes of grace before lateness
+                counts (default 60, i.e. 1 hour).
+
+        Returns:
+            df_lateday (pd.DataFrame): late days per student-assignment
+        """
+        def _minutes_to_days(minutes):
+            effective = minutes - grace_period_minutes
+            if effective <= 0:
+                return 0
+            return ceil(effective / (24 * 60))
+
+        return self.df_late_minutes.map(_minutes_to_days)
+
+    def _resolve_email(self, email):
+        """Resolve an email to a matching index entry by prefix.
+
+        Exact match is tried first; if that fails, the prefix before '@'
+        is compared against all index entries.  Returns the matched index
+        email, or the original email if no match is found.
+        """
+        if email in self.df_perc.index:
+            return email
+
+        prefix = email.split('@')[0]
+        for idx_email in self.df_perc.index:
+            if idx_email.split('@')[0] == prefix:
+                return idx_email
+
+        # no match — return as-is (caller will see KeyError or warning)
+        return email
 
     def waive(self, waive_dict):
         """ waives assignment (per student) by marking percentages as nan
@@ -74,6 +116,7 @@ class Gradebook:
         """
 
         for email, ass_list in waive_dict.items():
+            email = self._resolve_email(email)
             for ass in ass_list:
                 try:
                     _ass = self.ass_list.match(ass)
@@ -200,7 +243,8 @@ class Gradebook:
         self.points = np.delete(self.points, ass_idx)
 
     def get_late_penalty(self, cat, penalty_per_day, excuse_day=0,
-                         excuse_day_offset=None, waive_dict=None):
+                         excuse_day_offset=None, waive_dict=None,
+                         grace_period_minutes=60):
         """ computes modifier to category mean to incorporate late penalty
 
         Let late_day be the total number of days late (across all hws of one
@@ -223,6 +267,8 @@ class Gradebook:
                 added to excuse_day value to be used for corresponding student
             waive_dict (dict): keys are student emails, values are lists
                 of assignments whose late days are to be waived
+            grace_period_minutes (int): minutes of grace before lateness
+                counts.  Defaults to 60 (1 hour).
 
         Returns:
             s_unexcuse_late_day (pd.Series): number of unexcused late days
@@ -236,12 +282,17 @@ class Gradebook:
         if waive_dict is None:
             waive_dict = dict()
 
+        # compute late days using the configured grace period
+        df_lateday = self._compute_lateday(
+            grace_period_minutes=grace_period_minutes)
+
         # get late days across category
         ass_cat_list = list(self.ass_list.match_iter(s_assign=cat))
-        df_late = self.df_lateday.loc[:, ass_cat_list].copy()
+        df_late = df_lateday.loc[:, ass_cat_list].copy()
 
         # waive late days per email / assignment
         for email, ass_list in waive_dict.items():
+            email = self._resolve_email(email)
             for ass in ass_list:
                 ass = self.ass_list.match(ass)
                 if ass in df_late.columns:
@@ -252,6 +303,7 @@ class Gradebook:
         s_excuse_day = pd.Series(index=s_late_day.index, data=excuse_day)
         if excuse_day_offset is not None:
             for email, offset in excuse_day_offset.items():
+                email = self._resolve_email(email)
                 if email in s_excuse_day:
                     s_excuse_day[email] += offset
                 else:

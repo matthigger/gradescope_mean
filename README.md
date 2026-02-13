@@ -1,54 +1,210 @@
 # Gradescope Mean
 
-A utility which computes final grades (example: [grade_full.csv](doc/grade_full.csv)) from gradescope outputs. It allows the instructor to ...
+Compute final grades from a Gradescope CSV export — with category weighting, lowest-N drops, late penalties, per-student waivers, and more.
 
-- weight assignments per category
-    - e.g. all HW assignments are 50% of grade
-- waive lowest N assignments per category
-    - e.g. 2 lowest HW assignments, per student, are waived
-- apply a late penalty (per day) that assignments are submitted beyond
-  deadline
-    - e.g. HW is penalized 15% of average assignment hw weight for every day late it is submitted 
-    - also includes support for not penalizing the first N "late days" per assignment category (e.g. each student may use up to 3 "late days" across all HWs without penalty)
-- waive assignments per individual student
-- waive late penalties per individual student's assignment
-- validate gradescope student list by passing an email list of active students
-    - e.g. one student has a low average grade, have they dropped the course?
-- exclude assignments which shouldn't be included in final grade
-    - assignments automatically excluded if they don't have some minimum completion threshold
-- substitute one assignment in place of another (where substitute has
-  higher percentage)
-    - e.g. to "merge" two versions of the quiz with their own unique gradescope assignment
-        1. substitute `quiz_02` for `quiz_01`
-        2. exclude `quiz_02`
+    pip install gradescope-mean
 
-# Installation
+## Quick Start
 
-    pip3 install gradescope-mean
+1. Download grades from Gradescope (`Assignments > Download Grades > CSV`) to a file like `scope.csv`.
 
-# Usage
+2. Run:
 
-Download all gradescope assignments to some local `scope.csv` file
-(`Assignments > Download Grades > Download CSV`) and run:
+        gradescope-mean grade scope.csv
 
-    python -m gradescope_mean scope.csv
+   This produces [grade_full.csv](doc/grade_full.csv) and creates a `config.yaml` in the same directory.
 
-to create output [grade_full.csv](doc/grade_full.csv) using default configuartion.
-This first run will have created a `config.yaml` configuration file which you can modify to take advantage of the functionality listed above (details given in the [configuration doc](doc/config.md)).
-To re-run with your configuration options:
+3. Edit `config.yaml` to set up your grading policy (see below), then re-run:
 
-    python -m gradescope_mean scope.csv --config config.yaml
+        gradescope-mean grade scope.csv --config config.yaml
 
-## Other outputs
+That's it. The rest of this README covers what you can put in that config file and the additional flags available.
 
-- Provide an output file via `--late_csv` to observe late days per student-assignment pair.
+## Configuration
 
-- Provide the `--per_student` flag to create a folder of student-specific csvs, helpful for emailing students the particulars of their grades.
+All grading policy lives in `config.yaml`. A default copy is created on your first run — open it up and fill in the sections that apply to your course. Tabs aren't allowed in YAML, so use spaces (2 or 4 per indent level, consistently).
 
-- Pass the `--plot` flag above to view histograms ([hist.html](doc/hist.html)) per assignment category:
+### Category weights
+
+```yaml
+category:
+  weight:
+    hw: 50
+    exam: 50
+```
+
+A category is a subset of assignments. The example above gives homework 50% and exams 50% of the final grade. Weights need not sum to 100 — they're normalized automatically — but should be positive.
+
+**How assignments map to categories:** each Gradescope assignment name is matched to categories by substring (case/space-insensitive). An assignment named "HW 3" lands in the `hw` category, "Exam - Midterm" lands in `exam`. Every assignment should match exactly one category. By default no categories are created and every assignment is weighted by its Gradescope point value.
+
+### Drop lowest
+
+```yaml
+category:
+  drop_low:
+    hw: 2
+```
+
+Drops each student's 2 lowest homework scores. Any category listed here must also appear in `category/weight`. By default nothing is dropped.
+
+### Late penalty
+
+```yaml
+category:
+  late_penalty:
+    hw:
+      penalty_per_day: 0.15
+      excuse_day: 3
+      grace_period_minutes: 60
+      excuse_day_offset:
+        student0@uni.edu: -3
+        student1@uni.edu: 4
+```
+
+- **`penalty_per_day: 0.15`** — every unexcused [late day](https://help.gradescope.com/article/ude437e7li-faq-late-submissions) costs 15% of an average HW's point value. For example, if one HW is 3 unexcused days late, the student loses 45% of the average HW points. The penalty is spread across the category mean (it won't appear on any single HW score, but shows up in the `mean_hw` column of the output).
+  - **`grace_period_minutes: 60`** (optional, default 60) — minutes of grace before lateness starts counting. A submission 59 minutes late uses 0 late days; one at 24 hours 5 minutes uses 1 late day (not 2). Set to `0` to disable the grace period.
+- **`excuse_day: 3`** — every student gets 3 free late days across all HWs before penalties kick in. (Helps avoid emails over deadline minutiae.)
+- **`excuse_day_offset`** — adjust the excuse-day count per student, useful for DRC accommodations. Values are additive: in the example above `student0` has 0 excuse days (3 + (−3)) and `student1` has 7 (3 + 4).
+
+By default no late penalty is applied.
+
+### Exclude assignments
+
+```yaml
+assignments:
+  exclude:
+    - practice_quiz
+    - quiz1_v2
+```
+
+Excludes any assignment whose name contains the given string (case/space-insensitive). By default nothing is excluded.
+
+### Completion threshold
+
+```yaml
+assignments:
+  exclude_complete_thresh: 0.6
+```
+
+Auto-excludes any assignment where fewer than 60% of students received a non-zero score (no submissions count as zero). Applied after other exclusions and substitutions. By default no threshold is applied.
+
+### Substitute assignments
+
+```yaml
+assignments:
+  substitute:
+    quiz1:
+      - quiz1_v2
+      - quiz1_v3
+  exclude:
+    - quiz1_v2
+    - quiz1_v3
+```
+
+Replaces each student's `quiz1` score with the maximum percentage among `quiz1`, `quiz1_v2`, and `quiz1_v3`. Useful when you have multiple Gradescope assignments for different versions of the same quiz — each needs its own rubric, but you want a single score for grading. Be sure to also exclude the alternates so they don't double-count. By default nothing is substituted.
+
+### Waive assignments
+
+```yaml
+waive:
+  student0@uni.edu: hw1
+  student1@uni.edu: hw1, hw2, hw3
+```
+
+Waives assignments for individual students. The final grade is computed as if the work was never assigned, and any associated late penalties are also waived. By default nothing is waived.
+
+### Waive late penalties
+
+```yaml
+waive_late:
+  student0@uni.edu: hw1
+  student1@uni.edu: hw1, hw2, hw3
+```
+
+Waives late penalties on specific assignments for individual students (the score still counts). Applied before excused late days are consumed. By default nothing is waived.
+
+### Grade thresholds
+
+```yaml
+grade_thresh:
+  0.93: A
+  0.90: A-
+  0.87: B+
+  0.83: B
+  0.80: B-
+  0.77: C+
+  0.73: C
+  0.70: C-
+  0.67: D+
+  0.63: D
+  0.60: D-
+  0: E
+```
+
+The lowest percentage (inclusive) to earn each letter grade. The values above are the defaults.
+
+### Email list
+
+```yaml
+email_list:
+  - name0@uni.edu
+  - name1@uni.edu
+```
+
+If provided, any email not found in the Gradescope data triggers a warning, and any Gradescope student not in this list is silently dropped. Useful for filtering out students who have dropped the course.
+
+By default every student in Gradescope is included.
+
+### Email matching
+
+Everywhere an email appears in the config — `waive`, `waive_late`, `excuse_day_offset`, and `email_list` — matching is done by the **prefix** (everything before `@`). This means `student@husky.neu.edu` in the config will correctly match `student@northeastern.edu` in Gradescope. All comparisons are case-insensitive.
+
+## Additional Options
+
+All flags go on the `grade` subcommand. Run `gradescope-mean grade --help` for the full list.
+
+```bash
+# choose where the output CSV goes
+gradescope-mean grade scope.csv --config config.yaml -o final_grades.csv
+
+# generate a histogram of grades per category
+gradescope-mean grade scope.csv --config config.yaml --plot
+
+# export a CSV of late days per student-assignment pair
+gradescope-mean grade scope.csv --config config.yaml --late_csv late_days.csv
+
+# create per-student CSVs (handy for emailing individual breakdowns)
+gradescope-mean grade scope.csv --config config.yaml --per_student
+
+# suppress status messages
+gradescope-mean grade scope.csv --config config.yaml -q
+
+# force a fresh default config (existing one is kept with a timestamp)
+gradescope-mean grade scope.csv --new-config
+```
+
+`--plot` accepts an optional filename (e.g. `--plot my_hist.html`); without one it defaults to `hist.html`.
+
+### Histogram output
 
 <img alt="histogram per category" src="doc/hist.png" width="800px"/>
 
-# Exporting Grades
+## Exporting Grades
 
-The interface above yields a "grade_full.csv" which can be processed so its ready to import into [canvas](doc/upload_canvas.md) or [Northeastern's Banner](doc/upload_banner.md), see links for detail.
+The `grade` command produces a `grade_full.csv`. Two additional subcommands format it for upload to your LMS:
+
+### Canvas
+
+```bash
+gradescope-mean canvas grade_full.csv canvas.csv --scale100
+```
+
+Download your Canvas gradebook as `canvas.csv` first. The `--scale100` flag scales grades to 0–100 to avoid Canvas's 2-decimal-place rounding ambiguity. See [doc/upload_canvas.md](doc/upload_canvas.md) for details.
+
+### Banner (Northeastern)
+
+```bash
+gradescope-mean banner grade_full.csv 202310 -c 12345 -c 67890
+```
+
+Pass the term code and one or more CRNs. Produces a timestamped `.xlsx` ready for Banner import. See [doc/upload_banner.md](doc/upload_banner.md) for details.

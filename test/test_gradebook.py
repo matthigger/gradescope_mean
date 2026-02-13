@@ -147,7 +147,39 @@ class TestGradebook:
         assert df_grade.loc['last3@nu.edu', 'mean'] == 1
 
     def test_average_full(self, gradebook):
-        gradebook.average_full()
+        df_full = gradebook.average_full()
+
+        # should contain meta columns, grade columns, and percentage columns
+        assert 'firstname' in df_full.columns
+        assert 'lastname' in df_full.columns
+        assert 'mean' in df_full.columns
+        assert 'letter' in df_full.columns
+        assert 'hw1' in df_full.columns
+        assert df_full.shape[0] == 5
+
+    def test_remove_thresh(self, gradebook):
+        # all assignments have 100% completion in test data; thresh=0 removes
+        # nothing (completeness is > 0 for all)
+        n_before = len(gradebook.ass_list)
+        gradebook.remove_thresh(min_complete_thresh=0)
+        assert len(gradebook.ass_list) == n_before
+
+    def test_remove_thresh_high(self, gradebook):
+        # waive hw1 for all students so it has 0% completion, then set high
+        # threshold
+        for email in gradebook.df_perc.index:
+            gradebook.df_perc.loc[email, 'hw1'] = 0
+        gradebook.remove_thresh(min_complete_thresh=0.5)
+        assert 'hw1' not in gradebook.ass_list
+
+    def test_get_late_penalty_negative_raises(self, gradebook):
+        with pytest.raises(AttributeError):
+            gradebook.get_late_penalty(cat='hw1', penalty_per_day=-0.1)
+
+    def test_waive_nonexistent_warns(self, gradebook):
+        waive_dict = {'last0@nu.edu': ['nonexistent_hw']}
+        with pytest.warns(UserWarning, match='waive-fail'):
+            gradebook.waive(waive_dict)
 
     def test_prune_email(self, gradebook):
         email_list = ['last0@nu.edu', 'not-in-list@nu.edu']
@@ -161,3 +193,131 @@ class TestGradebook:
         email_list = ['last0@gmail.com']
         gradebook.prune_email(email_list, ignore_suffix=True)
         assert gradebook.df_perc.shape[0] == 1
+
+    def test_prune_email_no_ignore_suffix(self, gradebook):
+        email_list = ['last0@nu.edu', 'last1@nu.edu']
+        gradebook.prune_email(email_list, ignore_suffix=False)
+        assert gradebook.df_perc.shape[0] == 2
+        assert gradebook.df_meta.shape[0] == 2
+        assert gradebook.df_lateday.shape[0] == 2
+
+    def test_resolve_email_exact(self, gradebook):
+        """_resolve_email returns exact match when present"""
+        assert gradebook._resolve_email('last0@nu.edu') == 'last0@nu.edu'
+
+    def test_resolve_email_prefix(self, gradebook):
+        """_resolve_email matches by prefix when suffix differs"""
+        assert gradebook._resolve_email('last0@other.edu') == 'last0@nu.edu'
+
+    def test_resolve_email_no_match(self, gradebook):
+        """_resolve_email returns original if no prefix match"""
+        assert gradebook._resolve_email('nonexist@x.edu') == 'nonexist@x.edu'
+
+    def test_waive_by_prefix(self, gradebook):
+        """waive should work with a different email suffix (issue #9)"""
+        waive_dict = {'last0@husky.neu.edu': ['hw1']}
+        gradebook.waive(waive_dict)
+        assert np.isnan(gradebook.df_perc.loc['last0@nu.edu', 'hw1'])
+
+    def test_late_penalty_excuse_offset_by_prefix(self, gradebook):
+        """excuse_day_offset should match by email prefix (issue #9)"""
+        _, s_pen = gradebook.get_late_penalty(
+            cat='hw1', penalty_per_day=.1, excuse_day=0,
+            excuse_day_offset={'last4@different.edu': 4})
+        # last4 is 4 days late, with 4 excuse days → 0 penalty
+        assert s_pen.loc['last4@nu.edu'] == 0.0
+
+    def test_late_minutes_raw(self, gradebook):
+        """df_late_minutes stores raw minutes (no grace period applied)"""
+        # hw1 lateness in scope.csv: 00:00:00, 24:00:00, 48:00:00, 72:00:00,
+        # 96:00:00
+        expected_minutes = [0, 24 * 60, 48 * 60, 72 * 60, 96 * 60]
+        np.testing.assert_allclose(expected_minutes,
+                                   gradebook.df_late_minutes['hw1'])
+
+    def test_compute_lateday_default(self, gradebook):
+        """Default 60-min grace gives same late days as before"""
+        df_late = gradebook._compute_lateday(grace_period_minutes=60)
+        np.testing.assert_allclose([0, 1, 2, 3, 4], df_late['hw1'])
+
+    def test_compute_lateday_zero_grace(self, gradebook):
+        """With 0 grace, any lateness counts"""
+        df_late = gradebook._compute_lateday(grace_period_minutes=0)
+        # 00:00:00 → 0 days, 24:00:00 → 1 day, etc.
+        np.testing.assert_allclose([0, 1, 2, 3, 4], df_late['hw1'])
+
+    def test_compute_lateday_large_grace(self, gradebook):
+        """Grace period larger than 24h should forgive first day"""
+        df_late = gradebook._compute_lateday(grace_period_minutes=25 * 60)
+        # 0h→0, 24h→0 (under 25h grace), 48h→1, 72h→2, 96h→3
+        np.testing.assert_allclose([0, 0, 1, 2, 3], df_late['hw1'])
+
+    def test_grace_period_boundary_issue16(self, tmp_path):
+        """Issue #16: 49h lateness with 60-min grace should be 2 days, not 3.
+
+        Old formula: ceil(49/24) = 3 (bug)
+        New formula: ceil((49*60 - 60) / 1440) = ceil(2880/1440) = 2
+        """
+        # create CSV with a single student 49 hours late
+        csv_content = (
+            'First Name,Last Name,SID,Email,section_name,'
+            'HW1,HW1 - Max Points,HW1 - Submission Time,'
+            'HW1 - Lateness (H:M:S)\n'
+            'Jane,Doe,999S,jane@uni.edu,sec1,'
+            '8,10,2023-01-01 12:00:00 -0500,49:00:00\n'
+        )
+        f = tmp_path / 'scope.csv'
+        f.write_text(csv_content)
+        gb = Gradebook(str(f))
+
+        # with default 60-min grace: 49h → 2 days (NOT 3)
+        df_late = gb._compute_lateday(grace_period_minutes=60)
+        assert df_late.loc['jane@uni.edu', 'hw1'] == 2
+
+    def test_grace_period_minutes_in_late_penalty(self, gradebook):
+        """grace_period_minutes passed through get_late_penalty"""
+        # with default 60-min grace, student1 has 1 late day on hw1
+        _, s_pen = gradebook.get_late_penalty(
+            cat='hw1', penalty_per_day=.1, excuse_day=0,
+            grace_period_minutes=60)
+        assert s_pen.loc['last1@nu.edu'] == pytest.approx(-.1)
+
+        # with 25-hour grace, student1's 24h lateness is forgiven
+        _, s_pen = gradebook.get_late_penalty(
+            cat='hw1', penalty_per_day=.1, excuse_day=0,
+            grace_period_minutes=25 * 60)
+        assert s_pen.loc['last1@nu.edu'] == 0.0
+
+    def test_grace_period_via_config(self, tmp_path):
+        """grace_period_minutes works end-to-end through Config"""
+        import shutil
+        f_scope = tmp_path / 'scope.csv'
+        shutil.copy(test_folder / 'scope.csv', f_scope)
+
+        config_content = """\
+category:
+  weight:
+    hw: 1
+    quiz: 0
+  drop_low: null
+  late_penalty:
+    hw:
+      penalty_per_day: 1
+      excuse_day: 0
+      grace_period_minutes: 1500
+assignments:
+  exclude_complete_thresh: null
+  exclude: null
+  substitute: null
+waive: null
+waive_late: null
+email_list: null
+"""
+        f_config = tmp_path / 'config.yaml'
+        f_config.write_text(config_content)
+        config = Config.from_file(f_config)
+        _, df_full = config(f_scope)
+
+        # 1500 min = 25h grace → student1 (24h late) is forgiven
+        # so student1 has 0 unexcused late days
+        assert df_full.loc['last1@nu.edu', 'late days remain (hw)'] == 0

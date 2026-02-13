@@ -1,3 +1,10 @@
+# gradescope_mean config
+# lines starting with '#' are ignored
+# use spaces for indentation (not tabs), 2 per level
+# assignment / category names are case- and space-insensitive
+# examples of each section are below
+# see github for full documentation: https://github.com/matthigger/gradescope_mean
+
 category:
   weight: null
   drop_low: null
@@ -26,5 +33,79 @@ grade_thresh:
   .60: D-
   0: E
 
-
 email_list: null
+
+
+# =====================================================================
+# examples — uncomment the "# " and copy above as needed
+# =====================================================================
+
+# category:
+#   weight:
+#     hw: 50
+#     exam: 50
+#   drop_low:
+#     hw: 2
+
+# what this does:
+# half the final grade is hw, the other half is exams.
+# each student's 2 lowest hw scores are dropped.
+# assignments are matched to categories by substring, so "HW 3" matches
+# "hw" and "Exam - Midterm1 version A" matches "exam"
+
+# category:
+#   late_penalty:
+#     hw:
+#       penalty_per_day: .15
+#       excuse_day: 3
+#       grace_period_minutes: 60
+#       excuse_day_offset:
+#         student@uni.edu: 4
+
+# what this does:
+# each unexcused late day costs 15% of the average hw.
+# every student gets 3 free late days across all hw assignments.
+# submissions within 60 minutes of the deadline are not counted as late.
+# student@uni.edu gets 4 extra excuse days (7 total), e.g. for a DRC
+# accommodation.
+
+# assignments:
+#   exclude_complete_thresh: .6
+#   exclude:
+#     - practice quiz
+#     - exam1 v2
+#   substitute:
+#     quiz1:
+#       - quiz1 v2
+#       - quiz1 v3
+
+# what this does:
+# auto-exclude any assignment where fewer than 60% of students submitted.
+# also exclude "practice quiz" and "exam1 v2" by name.
+# replace each student's quiz1 score with the max of quiz1, quiz1 v2,
+# and quiz1 v3 (useful for multiple versions of the same quiz).
+# be sure to also exclude the alternates so they don't double-count.
+
+# waive:
+#   student@uni.edu: hw3
+#   other@uni.edu: hw1, hw2, hw3
+
+# what this does:
+# drop hw3 for student (as if it was never assigned).
+# drop hw1, hw2, and hw3 for other.
+# when a student emails about a missed assignment, add a line here.
+
+# waive_late:
+#   student@uni.edu: hw4
+
+# what this does:
+# forgive the late penalty on hw4 for student@uni.edu, but the score still counts.
+
+# email_list:
+#   - name0@uni.edu
+#   - name1@uni.edu
+
+# what this does:
+# only these students appear in output; everyone else is dropped.
+# emails are matched by prefix (before @), so student@husky.neu.edu
+# matches student@northeastern.edu.

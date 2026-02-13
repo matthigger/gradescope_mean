@@ -42,11 +42,12 @@ def canvas_merge(f_canvas, df_grade, del_col_list=None,
                                     how='left')
 
     def print_missing(df, idx_missing, msg, n_cols=3):
-        if not idx_missing:
-            print('<no students>')
         print(msg)
+        if not idx_missing:
+            print('  <no students>')
+            return
         for idx in idx_missing:
-            print(df.loc[idx, :].iloc[:n_cols].to_dict())
+            print(f'  {df.loc[idx, :].iloc[:n_cols].to_dict()}')
 
     # find and print canvas students not in gradescope
     idx_missing = set(df_canvas.index) - set(df_grade.index)

@@ -1,6 +1,6 @@
 [project]
 name = "gradescope-mean"
-version = "0.0.19"
+version = "0.0.20"
 description = "Utility to average gradescope csv output to final grades"
 authors = [
     {name = "Matt Higger",email = "mhigger@ccs.neu.edu"}
@@ -15,6 +15,8 @@ dependencies = [
     "openpyxl (>=3.1.5,<4.0.0)"
 ]
 
+[project.scripts]
+gradescope-mean = "gradescope_mean.__main__:main"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
