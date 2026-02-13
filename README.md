@@ -170,9 +170,6 @@ gradescope-mean grade scope.csv --config config.yaml -o final_grades.csv
 # generate a histogram of grades per category
 gradescope-mean grade scope.csv --config config.yaml --plot
 
-# generate a PCA scatter plot (spot outliers / trends)
-gradescope-mean grade scope.csv --config config.yaml --pca
-
 # export a CSV of late days per student-assignment pair
 gradescope-mean grade scope.csv --config config.yaml --late_csv late_days.csv
 
@@ -186,7 +183,7 @@ gradescope-mean grade scope.csv --config config.yaml -q
 gradescope-mean grade scope.csv --new-config
 ```
 
-`--plot` and `--pca` accept an optional filename (e.g. `--plot my_hist.html`); without one they default to `hist.html` and `pca.html`.
+`--plot` accepts an optional filename (e.g. `--plot my_hist.html`); without one it defaults to `hist.html`.
 
 ### Histogram output
 

@@ -44,10 +44,6 @@ grade_parser.add_argument(
     help='generate histogram HTML per assignment category '
          '(default filename: hist.html)')
 grade_parser.add_argument(
-    '--pca', dest='f_pca', nargs='?', const='pca.html', default=None,
-    help='generate PCA scatter plot HTML '
-         '(default filename: pca.html)')
-grade_parser.add_argument(
     '--late_csv', dest='f_late_csv', default=None,
     help='output CSV of late days per student-assignment pair')
 grade_parser.add_argument(
@@ -150,16 +146,6 @@ def cmd_grade(args):
         fig.write_html(str(f_html), include_plotlyjs='cdn')
         logger.info(f'wrote {f_html}')
 
-    # PCA scatter
-    if args.f_pca:
-        point_dict = dict(zip(gradebook.ass_list, gradebook.points))
-        fig = gradescope_mean.plot_pca(
-            df_grade_full=df_grade_full,
-            cat_weight_dict=config.cat_weight_dict,
-            point_dict=point_dict)
-        f_pca = folder / args.f_pca
-        fig.write_html(str(f_pca), include_plotlyjs='cdn')
-        logger.info(f'wrote {f_pca}')
 
 
 def cmd_canvas(args):
