@@ -116,3 +116,104 @@ email_list: null
 
         config = Config.from_file(f_config)
         assert 'last4@nu.edu' in config.late_waive_dict
+
+
+class TestConfigValidation:
+    """Tests for issue #19: better config file validation."""
+
+    def test_empty_waive_value_warns(self):
+        """waive: email: (empty) should warn and be ignored, not crash"""
+        with pytest.warns(UserWarning, match='empty assignment list'):
+            config = Config(waive_dict={'a@b.edu': None})
+        assert config.waive_dict == {}
+
+    def test_empty_string_waive_warns(self):
+        """waive: email: '' should warn and be ignored"""
+        with pytest.warns(UserWarning, match='empty assignment list'):
+            config = Config(waive_dict={'a@b.edu': ''})
+        assert config.waive_dict == {}
+
+    def test_empty_late_waive_value_warns(self):
+        """waive_late: email: (empty) should warn and be ignored"""
+        with pytest.warns(UserWarning, match='empty assignment list'):
+            config = Config(late_waive_dict={'a@b.edu': None})
+        assert config.late_waive_dict == {}
+
+    def test_waive_as_yaml_list(self):
+        """waive values can be YAML lists, not just comma-separated strings"""
+        config = Config(waive_dict={'a@b.edu': ['hw1', 'hw2']})
+        assert config.waive_dict == {'a@b.edu': ['hw1', 'hw2']}
+
+    def test_negative_category_weight_raises(self):
+        """Negative category weight should raise ValueError"""
+        with pytest.raises(ValueError, match='category weight'):
+            Config(cat_weight_dict={'hw': -1})
+
+    def test_string_category_weight_raises(self):
+        """Non-numeric category weight should raise ValueError"""
+        with pytest.raises(ValueError, match='category weight'):
+            Config(cat_weight_dict={'hw': 'abc'})
+
+    def test_negative_drop_raises(self):
+        """Negative drop_low should raise ValueError"""
+        with pytest.raises(ValueError, match='drop_low'):
+            Config(cat_drop_dict={'hw': -1})
+
+    def test_float_drop_raises(self):
+        """Float drop_low should raise ValueError"""
+        with pytest.raises(ValueError, match='drop_low'):
+            Config(cat_drop_dict={'hw': 1.5})
+
+    def test_invalid_exclude_complete_thresh_raises(self):
+        """exclude_complete_thresh > 1 should raise ValueError"""
+        with pytest.raises(ValueError, match='exclude_complete_thresh'):
+            Config(exclude_complete_thresh=1.5)
+
+    def test_null_values_in_yaml(self, tmp_path):
+        """Config with all nulls (as in default) should load cleanly"""
+        config_content = """\
+category:
+  weight: null
+  drop_low: null
+  late_penalty: null
+assignments:
+  exclude_complete_thresh: null
+  exclude: null
+  substitute: null
+waive: null
+waive_late: null
+email_list: null
+"""
+        f_config = tmp_path / 'config.yaml'
+        f_config.write_text(config_content)
+        config = Config.from_file(f_config)
+        assert config.cat_weight_dict == {}
+        assert config.waive_dict == {}
+        assert config.exclude_complete_thresh == 0
+
+    def test_missing_sections_in_yaml(self, tmp_path):
+        """Config with missing sections should use defaults"""
+        config_content = """\
+category:
+  weight:
+    hw: 1
+"""
+        f_config = tmp_path / 'config.yaml'
+        f_config.write_text(config_content)
+        config = Config.from_file(f_config)
+        assert config.cat_weight_dict == {'hw': 1}
+        assert config.waive_dict == {}
+
+    def test_invalid_yaml_raises(self, tmp_path):
+        """Malformed YAML should raise a clear ValueError"""
+        f_config = tmp_path / 'config.yaml'
+        f_config.write_text(': invalid: [yaml:')
+        with pytest.raises(ValueError, match='failed to parse config'):
+            Config.from_file(f_config)
+
+    def test_non_mapping_yaml_raises(self, tmp_path):
+        """YAML that parses to a list (not dict) should raise ValueError"""
+        f_config = tmp_path / 'config.yaml'
+        f_config.write_text('- item1\n- item2\n')
+        with pytest.raises(ValueError, match='must be a YAML mapping'):
+            Config.from_file(f_config)
