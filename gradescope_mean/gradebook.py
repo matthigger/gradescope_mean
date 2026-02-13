@@ -90,6 +90,24 @@ class Gradebook:
 
         return self.df_late_minutes.map(_minutes_to_days)
 
+    def _resolve_email(self, email):
+        """Resolve an email to a matching index entry by prefix.
+
+        Exact match is tried first; if that fails, the prefix before '@'
+        is compared against all index entries.  Returns the matched index
+        email, or the original email if no match is found.
+        """
+        if email in self.df_perc.index:
+            return email
+
+        prefix = email.split('@')[0]
+        for idx_email in self.df_perc.index:
+            if idx_email.split('@')[0] == prefix:
+                return idx_email
+
+        # no match — return as-is (caller will see KeyError or warning)
+        return email
+
     def waive(self, waive_dict):
         """ waives assignment (per student) by marking percentages as nan
 
@@ -98,6 +116,7 @@ class Gradebook:
         """
 
         for email, ass_list in waive_dict.items():
+            email = self._resolve_email(email)
             for ass in ass_list:
                 try:
                     _ass = self.ass_list.match(ass)
@@ -273,6 +292,7 @@ class Gradebook:
 
         # waive late days per email / assignment
         for email, ass_list in waive_dict.items():
+            email = self._resolve_email(email)
             for ass in ass_list:
                 ass = self.ass_list.match(ass)
                 if ass in df_late.columns:
@@ -283,6 +303,7 @@ class Gradebook:
         s_excuse_day = pd.Series(index=s_late_day.index, data=excuse_day)
         if excuse_day_offset is not None:
             for email, offset in excuse_day_offset.items():
+                email = self._resolve_email(email)
                 if email in s_excuse_day:
                     s_excuse_day[email] += offset
                 else:

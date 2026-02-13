@@ -153,9 +153,11 @@ email_list:
 
 If provided, any email not found in the Gradescope data triggers a warning, and any Gradescope student not in this list is silently dropped. Useful for filtering out students who have dropped the course.
 
-To handle `@husky.neu.edu` vs `@northeastern.edu` ambiguity, only the portion before `@` is compared.
-
 By default every student in Gradescope is included.
+
+### Email matching
+
+Everywhere an email appears in the config — `waive`, `waive_late`, `excuse_day_offset`, and `email_list` — matching is done by the **prefix** (everything before `@`). This means `student@husky.neu.edu` in the config will correctly match `student@northeastern.edu` in Gradescope. All comparisons are case-insensitive.
 
 ## Additional Options
 

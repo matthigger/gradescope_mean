@@ -217,3 +217,38 @@ category:
         f_config.write_text('- item1\n- item2\n')
         with pytest.raises(ValueError, match='must be a YAML mapping'):
             Config.from_file(f_config)
+
+
+class TestConfigEmailPrefix:
+    """Tests for issue #9: email prefix matching in config."""
+
+    def test_waive_with_different_suffix(self):
+        """waive works when config email has different suffix than scope"""
+        f_scope = test_folder / 'scope.csv'
+        # last0 is last0@nu.edu in scope, but we use @husky.neu.edu here
+        config = Config(waive_dict={'last0@husky.neu.edu': 'hw1'})
+        gradebook, _ = config(f_scope)
+        assert np.isnan(gradebook.df_perc.loc['last0@nu.edu', 'hw1'])
+
+    def test_email_list_lowercased(self):
+        """email_list entries should be lowercased"""
+        config = Config(email_list=['FOO@BAR.EDU', 'Baz@Qux.Edu'])
+        assert config.email_list == ['foo@bar.edu', 'baz@qux.edu']
+
+    def test_waive_dict_keys_lowercased(self):
+        """waive_dict email keys should be lowercased"""
+        config = Config(waive_dict={'FOO@bar.edu': 'hw1'})
+        assert 'foo@bar.edu' in config.waive_dict
+
+    def test_late_waive_dict_keys_lowercased(self):
+        """late_waive_dict email keys should be lowercased"""
+        config = Config(late_waive_dict={'FOO@bar.edu': 'hw1'})
+        assert 'foo@bar.edu' in config.late_waive_dict
+
+    def test_excuse_day_offset_keys_lowercased(self):
+        """excuse_day_offset emails inside cat_late_dict should be lowered"""
+        config = Config(cat_late_dict={
+            'hw': {'penalty_per_day': 0.1, 'excuse_day': 0,
+                   'excuse_day_offset': {'FOO@bar.edu': 2}}})
+        offset = config.cat_late_dict['hw']['excuse_day_offset']
+        assert 'foo@bar.edu' in offset

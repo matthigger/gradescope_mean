@@ -201,6 +201,32 @@ class TestGradebook:
         assert gradebook.df_meta.shape[0] == 2
         assert gradebook.df_lateday.shape[0] == 2
 
+    def test_resolve_email_exact(self, gradebook):
+        """_resolve_email returns exact match when present"""
+        assert gradebook._resolve_email('last0@nu.edu') == 'last0@nu.edu'
+
+    def test_resolve_email_prefix(self, gradebook):
+        """_resolve_email matches by prefix when suffix differs"""
+        assert gradebook._resolve_email('last0@other.edu') == 'last0@nu.edu'
+
+    def test_resolve_email_no_match(self, gradebook):
+        """_resolve_email returns original if no prefix match"""
+        assert gradebook._resolve_email('nonexist@x.edu') == 'nonexist@x.edu'
+
+    def test_waive_by_prefix(self, gradebook):
+        """waive should work with a different email suffix (issue #9)"""
+        waive_dict = {'last0@husky.neu.edu': ['hw1']}
+        gradebook.waive(waive_dict)
+        assert np.isnan(gradebook.df_perc.loc['last0@nu.edu', 'hw1'])
+
+    def test_late_penalty_excuse_offset_by_prefix(self, gradebook):
+        """excuse_day_offset should match by email prefix (issue #9)"""
+        _, s_pen = gradebook.get_late_penalty(
+            cat='hw1', penalty_per_day=.1, excuse_day=0,
+            excuse_day_offset={'last4@different.edu': 4})
+        # last4 is 4 days late, with 4 excuse days → 0 penalty
+        assert s_pen.loc['last4@nu.edu'] == 0.0
+
     def test_late_minutes_raw(self, gradebook):
         """df_late_minutes stores raw minutes (no grace period applied)"""
         # hw1 lateness in scope.csv: 00:00:00, 24:00:00, 48:00:00, 72:00:00,

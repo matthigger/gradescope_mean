@@ -99,7 +99,7 @@ class Config:
                          for s0, s1_list in self.sub_dict.items()}
 
         self.waive_dict = {
-            email: self._parse_waive_value(a_list, email, 'waive')
+            email.lower(): self._parse_waive_value(a_list, email, 'waive')
             for email, a_list in self.waive_dict.items()
         }
         # drop entries that ended up empty
@@ -108,12 +108,24 @@ class Config:
         self.cat_late_dict = {normalize(c): l
                               for c, l in self.cat_late_dict.items()}
 
+        # lowercase email keys inside excuse_day_offset
+        for cat, d in self.cat_late_dict.items():
+            if isinstance(d, dict) and 'excuse_day_offset' in d:
+                offset = d['excuse_day_offset']
+                if isinstance(offset, dict):
+                    d['excuse_day_offset'] = {
+                        e.lower(): v for e, v in offset.items()}
+
         self.late_waive_dict = {
-            email: self._parse_waive_value(a_list, email, 'waive_late')
+            email.lower(): self._parse_waive_value(
+                a_list, email, 'waive_late')
             for email, a_list in self.late_waive_dict.items()
         }
         self.late_waive_dict = {k: v for k, v in self.late_waive_dict.items()
                                 if v}
+
+        # lowercase email list entries
+        self.email_list = [e.lower() for e in self.email_list]
 
         # validate category weights are positive
         for cat, w in self.cat_weight_dict.items():
