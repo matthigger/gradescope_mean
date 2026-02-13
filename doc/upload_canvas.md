@@ -1,14 +1,14 @@
 # Uploading processed grades (`grade_full.csv`) to Canvas
 
-Download a canvas gradebook as some `canvas.csv` and pass it as:
+Download a Canvas gradebook as some `canvas.csv` and run:
 
-    python -m gradescope_mean.canvas grade_full.csv canvas.csv
+    gradescope-mean canvas grade_full.csv canvas.csv
 
 The script will merge the grades and means into a new `canvas_<timestamp>.csv`
-file which can be imported to canvas.
+file which can be imported to Canvas.
 
 ## Notes
-- Canvas displays to two rounded decimal places on the website, which can be ambiguous for students who rely on this last decimal place to determine grading thresholds at the end of the semester.  Considering passing the `--scale100` flag above to scale your grades by 100 before uploading.
+- Canvas displays to two rounded decimal places on the website, which can be ambiguous for students who rely on this last decimal place to determine grading thresholds at the end of the semester.  Consider passing the `--scale100` flag to scale your grades by 100 before uploading.
 
 - We'll print a list of students who didn't match between the gradebooks (either from canvas or our own gradescope-derived csv).
 
