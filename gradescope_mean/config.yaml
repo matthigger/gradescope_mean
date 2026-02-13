@@ -1,7 +1,7 @@
 category:
   weight: null
   drop_low: null
-  late_penalty: null
+  late_penalty: null    # example:  hw: {penalty_per_day: 0.15, excuse_day: 3, grace_period_minutes: 60}
 
 assignments:
   exclude_complete_thresh: null
