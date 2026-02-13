@@ -1,154 +1,163 @@
 # Gradescope Mean
 
-A utility which computes final grades (example: [grade_full.csv](doc/grade_full.csv)) from Gradescope exports. It allows the instructor to ...
-
-- weight assignments per category
-    - e.g. all HW assignments are 50% of grade
-- drop lowest N assignments per category
-    - e.g. 2 lowest HW assignments, per student, are dropped
-- apply a late penalty (per day) that assignments are submitted beyond deadline
-    - e.g. HW is penalized 15% of average assignment hw weight for every day late it is submitted
-    - includes support for not penalizing the first N "late days" per assignment category (e.g. each student may use up to 3 "late days" across all HWs without penalty)
-    - per-student adjustments to excused late days
-- waive assignments per individual student
-- waive late penalties per individual student's assignment
-- validate the Gradescope student list against an email list of active students
-    - e.g. one student has a low average grade — have they dropped the course?
-- exclude assignments which shouldn't be included in final grade
-    - assignments automatically excluded if they don't have some minimum completion threshold
-- substitute one assignment in place of another (where substitute has higher percentage)
-    - e.g. to "merge" two versions of the quiz with their own unique Gradescope assignment
-        1. substitute `quiz_02` for `quiz_01`
-        2. exclude `quiz_02`
-- convert final percentages to letter grades with configurable thresholds
-
-# Installation
+Compute final grades from a Gradescope CSV export — with category weighting, lowest-N drops, late penalties, per-student waivers, and more.
 
     pip install gradescope-mean
 
-# Quick Start
+## Quick Start
 
-Download all Gradescope assignments to a local `scope.csv` file
-(`Assignments > Download Grades > Download CSV`) and run:
+1. Download grades from Gradescope (`Assignments > Download Grades > CSV`) to a file like `scope.csv`.
 
-    gradescope-mean grade scope.csv
+2. Run:
 
-This creates [grade_full.csv](doc/grade_full.csv) using the default configuration.
-On the first run a `config.yaml` is automatically created in the same directory as your CSV — edit it to take advantage of the features listed above (details in the [configuration doc](doc/config.md)).
+        gradescope-mean grade scope.csv
 
-To re-run with your configuration:
+   This produces [grade_full.csv](doc/grade_full.csv) and creates a `config.yaml` in the same directory.
 
-    gradescope-mean grade scope.csv --config config.yaml
+3. Edit `config.yaml` to set up your grading policy (see [Configuration](#configuration) below), then re-run:
 
-# CLI Reference
+        gradescope-mean grade scope.csv --config config.yaml
 
-The tool uses subcommands: `grade`, `canvas`, and `banner`. Run `gradescope-mean --help` to see them all, or `gradescope-mean <subcommand> --help` for details on any one.
+That's it. The rest of this README covers what you can put in that config file and the additional flags available.
 
-## `gradescope-mean grade`
+## Configuration
 
-The main workflow — compute final grades from a Gradescope CSV.
+All of the interesting behavior lives in `config.yaml`. On your first run a default copy is created for you — open it up and fill in the sections that apply to your course. The full reference is in [doc/config.md](doc/config.md); here's a summary of what's available:
 
+### Category weights & drops
+
+Group assignments into categories and weight them independently. Drop each student's lowest N scores in a category.
+
+```yaml
+category:
+  weight:
+    hw: 50
+    exam: 50
+  drop_low:
+    hw: 2          # drop each student's 2 lowest HW scores
 ```
-gradescope-mean grade scope.csv [OPTIONS]
+
+Assignments are mapped to categories by substring match (case/space-insensitive), so an assignment named "HW 3" lands in the `hw` category automatically.
+
+### Late penalties
+
+Penalize late submissions per day, with a configurable number of excused "free" late days per student. Individual students can receive extra (or fewer) excused days for accommodations.
+
+```yaml
+category:
+  late_penalty:
+    hw:
+      penalty_per_day: 0.15    # 15% of an average HW per unexcused day
+      excuse_day: 3            # 3 free late days across all HWs
+      excuse_day_offset:
+        student@uni.edu: 2     # this student gets 5 total (3 + 2)
 ```
 
-| Flag | Description |
-|---|---|
-| `--config FILE` | Path to a YAML config file. If omitted, uses `config.yaml` in the CSV's directory (creates a default copy if none exists). |
-| `--new-config` | Force creation of a fresh default `config.yaml`, even if one already exists (the existing file is preserved with a timestamp). |
-| `-o`, `--output FILE` | Output CSV path. Default: `grade_full.csv` in the same directory as the input CSV. |
-| `--plot [FILE]` | Generate a histogram HTML per assignment category. Default filename: `hist.html`. |
-| `--pca [FILE]` | Generate a PCA scatter plot HTML. Default filename: `pca.html`. |
-| `--late_csv FILE` | Output a CSV of late days per student-assignment pair. |
-| `--per_student` | Output a CSV per student into a `per_student/` folder. Useful for emailing students the details of their grades. |
-| `-q`, `--quiet` | Suppress informational output. |
-| `--version` | Print version and exit (top-level flag: `gradescope-mean --version`). |
+### Waivers
 
-### Examples
+Waive specific assignments (and their late penalties) for individual students — the final grade is computed as if the assignment was never assigned:
+
+```yaml
+waive:
+  student@uni.edu: hw1, hw2
+```
+
+Or waive only the late penalty on specific assignments (the score still counts):
+
+```yaml
+waive_late:
+  student@uni.edu: hw3
+```
+
+### Exclude & substitute assignments
+
+Exclude assignments entirely, or set a minimum completion threshold to auto-exclude unfinished work:
+
+```yaml
+assignments:
+  exclude:
+    - practice_quiz
+  exclude_complete_thresh: 0.6   # drop assignments < 60% submitted
+```
+
+Substitute one assignment's score with the best of several alternatives (useful for merging multiple quiz versions):
+
+```yaml
+assignments:
+  substitute:
+    quiz1:
+      - quiz1_v2
+      - quiz1_v3
+  exclude:
+    - quiz1_v2
+    - quiz1_v3
+```
+
+### Grade thresholds & email validation
+
+Set letter-grade cutoffs and provide an email list to flag students who may have dropped the course:
+
+```yaml
+grade_thresh:
+  0.93: A
+  0.90: A-
+  # ... (sensible defaults are provided)
+
+email_list:
+  - active_student@uni.edu
+```
+
+See [doc/config.md](doc/config.md) for the complete reference with all options and defaults.
+
+## Additional Options
+
+All flags go on the `grade` subcommand. Run `gradescope-mean grade --help` for the full list.
 
 ```bash
-# basic run, auto-creates config.yaml on first use
-gradescope-mean grade scope.csv
+# choose where the output CSV goes
+gradescope-mean grade scope.csv --config config.yaml -o final_grades.csv
 
-# explicit config, custom output path, quiet
-gradescope-mean grade scope.csv --config config.yaml -o final_grades.csv -q
+# generate a histogram of grades per category
+gradescope-mean grade scope.csv --config config.yaml --plot
 
-# generate histogram and PCA plots with default filenames
-gradescope-mean grade scope.csv --config config.yaml --plot --pca
+# generate a PCA scatter plot (spot outliers / trends)
+gradescope-mean grade scope.csv --config config.yaml --pca
 
-# generate histogram with a custom filename
-gradescope-mean grade scope.csv --config config.yaml --plot my_histogram.html
+# export a CSV of late days per student-assignment pair
+gradescope-mean grade scope.csv --config config.yaml --late_csv late_days.csv
 
-# per-student CSVs and late-day report
-gradescope-mean grade scope.csv --config config.yaml --per_student --late_csv late_days.csv
+# create per-student CSVs (handy for emailing individual breakdowns)
+gradescope-mean grade scope.csv --config config.yaml --per_student
 
-# force a fresh default config (existing config.yaml is preserved with a timestamp)
+# suppress status messages
+gradescope-mean grade scope.csv --config config.yaml -q
+
+# force a fresh default config (existing one is kept with a timestamp)
 gradescope-mean grade scope.csv --new-config
 ```
 
-### Histogram Output
+`--plot` and `--pca` accept an optional filename (e.g. `--plot my_hist.html`); without one they default to `hist.html` and `pca.html`.
 
-Pass `--plot` to view histograms ([hist.html](doc/hist.html)) per assignment category:
+### Histogram output
 
 <img alt="histogram per category" src="doc/hist.png" width="800px"/>
 
-# Exporting Grades
+## Exporting Grades
 
-The `grade` command produces a `grade_full.csv` which can be further processed for upload to [Canvas](doc/upload_canvas.md) or [Northeastern's Banner](doc/upload_banner.md).
+The `grade` command produces a `grade_full.csv`. Two additional subcommands format it for upload to your LMS:
 
-## `gradescope-mean canvas`
-
-Merge grades into a Canvas-compatible CSV for upload.
-
-```
-gradescope-mean canvas grade_full.csv canvas.csv [OPTIONS]
-```
-
-| Flag | Description |
-|---|---|
-| `--scale100` | Scale grades by 100 (0–100 range) to avoid Canvas rounding ambiguity at 2 decimal places. |
-| `-q`, `--quiet` | Suppress informational output. |
-
-Download your Canvas gradebook as `canvas.csv`, then:
+### Canvas
 
 ```bash
 gradescope-mean canvas grade_full.csv canvas.csv --scale100
 ```
 
-This produces a timestamped `canvas_<timestamp>.csv` ready for Canvas import. See the [Canvas upload doc](doc/upload_canvas.md) for details.
+Download your Canvas gradebook as `canvas.csv` first. The `--scale100` flag scales grades to 0–100 to avoid Canvas's 2-decimal-place rounding ambiguity. See [doc/upload_canvas.md](doc/upload_canvas.md) for details.
 
-## `gradescope-mean banner`
-
-Prepare an Excel file for Banner upload.
-
-```
-gradescope-mean banner grade_full.csv TERM_CODE -c CRN [OPTIONS]
-```
-
-| Flag | Description |
-|---|---|
-| `-c`, `--crn CRN` | CRN of a course section. May be passed multiple times for multiple sections. |
-| `-q`, `--quiet` | Suppress informational output. |
+### Banner (Northeastern)
 
 ```bash
-# single section
-gradescope-mean banner grade_full.csv 202310 -c 12345
-
-# multiple sections
 gradescope-mean banner grade_full.csv 202310 -c 12345 -c 67890
 ```
 
-This produces a timestamped `grade_full_banner_<timestamp>.xlsx`. See the [Banner upload doc](doc/upload_banner.md) for details.
-
-# Migration from `python -m`
-
-Prior versions used `python -m gradescope_mean scope.csv`. The new CLI uses subcommands:
-
-| Old | New |
-|---|---|
-| `python -m gradescope_mean scope.csv` | `gradescope-mean grade scope.csv` |
-| `python -m gradescope_mean scope.csv --config config.yaml` | `gradescope-mean grade scope.csv --config config.yaml` |
-| `python -m gradescope_mean.canvas grade_full.csv canvas.csv` | `gradescope-mean canvas grade_full.csv canvas.csv` |
-| `python -m gradescope_mean.banner grade_full.csv 202310 -c 12345` | `gradescope-mean banner grade_full.csv 202310 -c 12345` |
-
-The interactive prompt that asked whether to use an existing `config.yaml` has been replaced: the existing file is now used automatically (pass `--new-config` to force a fresh copy instead).
+Pass the term code and one or more CRNs. Produces a timestamped `.xlsx` ready for Banner import. See [doc/upload_banner.md](doc/upload_banner.md) for details.

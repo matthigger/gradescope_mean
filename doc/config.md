@@ -1,8 +1,8 @@
 All configuration options are stored in a `.yaml` file which can be passed as:
 
-    $python -m gradescope_mean scope.csv --config config.yaml
+    gradescope-mean grade scope.csv --config config.yaml
 
-Remember that tabs aren't allowed in YAML so be sure to use spaces (either 2 or 4 per indent level, used consistently, will work).
+A default `config.yaml` is created automatically on your first run — just fill in the sections that apply to your course. Remember that tabs aren't allowed in YAML, so use spaces (2 or 4 per indent level, used consistently).
 
 # Category
 
