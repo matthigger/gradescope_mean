@@ -193,8 +193,8 @@ class Config:
         shutil.copy(F_CONFIG_DEFAULT, f_config)
         logger.info(
             f'created default config — edit as needed, see '
-            f'https://github.com/matthigger/gradescope_mean/blob/main/doc'
-            f'/config.md for details:\n  {f_config}')
+            f'https://github.com/matthigger/gradescope_mean#configuration'
+            f' for details:\n  {f_config}')
 
         return cls.from_file(f_config)
 

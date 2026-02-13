@@ -14,7 +14,7 @@ Compute final grades from a Gradescope CSV export — with category weighting, l
 
    This produces [grade_full.csv](doc/grade_full.csv) and creates a `config.yaml` in the same directory.
 
-3. Edit `config.yaml` to set up your grading policy (see [Configuration](#configuration) below), then re-run:
+3. Edit `config.yaml` to set up your grading policy (see below), then re-run:
 
         gradescope-mean grade scope.csv --config config.yaml
 
@@ -22,65 +22,72 @@ That's it. The rest of this README covers what you can put in that config file a
 
 ## Configuration
 
-All of the interesting behavior lives in `config.yaml`. On your first run a default copy is created for you — open it up and fill in the sections that apply to your course. The full reference is in [doc/config.md](doc/config.md); here's a summary of what's available:
+All grading policy lives in `config.yaml`. A default copy is created on your first run — open it up and fill in the sections that apply to your course. Tabs aren't allowed in YAML, so use spaces (2 or 4 per indent level, consistently).
 
-### Category weights & drops
-
-Group assignments into categories and weight them independently. Drop each student's lowest N scores in a category.
+### Category weights
 
 ```yaml
 category:
   weight:
     hw: 50
     exam: 50
-  drop_low:
-    hw: 2          # drop each student's 2 lowest HW scores
 ```
 
-Assignments are mapped to categories by substring match (case/space-insensitive), so an assignment named "HW 3" lands in the `hw` category automatically.
+A category is a subset of assignments. The example above gives homework 50% and exams 50% of the final grade. Weights need not sum to 100 — they're normalized automatically — but should be positive.
 
-### Late penalties
+**How assignments map to categories:** each Gradescope assignment name is matched to categories by substring (case/space-insensitive). An assignment named "HW 3" lands in the `hw` category, "Exam - Midterm" lands in `exam`. Every assignment should match exactly one category. By default no categories are created and every assignment is weighted by its Gradescope point value.
 
-Penalize late submissions per day, with a configurable number of excused "free" late days per student. Individual students can receive extra (or fewer) excused days for accommodations.
+### Drop lowest
+
+```yaml
+category:
+  drop_low:
+    hw: 2
+```
+
+Drops each student's 2 lowest homework scores. Any category listed here must also appear in `category/weight`. By default nothing is dropped.
+
+### Late penalty
 
 ```yaml
 category:
   late_penalty:
     hw:
-      penalty_per_day: 0.15    # 15% of an average HW per unexcused day
-      excuse_day: 3            # 3 free late days across all HWs
+      penalty_per_day: 0.15
+      excuse_day: 3
       excuse_day_offset:
-        student@uni.edu: 2     # this student gets 5 total (3 + 2)
+        student0@uni.edu: -3
+        student1@uni.edu: 4
 ```
 
-### Waivers
+- **`penalty_per_day: 0.15`** — every unexcused [late day](https://help.gradescope.com/article/ude437e7li-faq-late-submissions) costs 15% of an average HW's point value. For example, if one HW is 3 unexcused days late, the student loses 45% of the average HW points. The penalty is spread across the category mean (it won't appear on any single HW score, but shows up in the `mean_hw` column of the output).
+  - A 1-hour grace period is built in: lateness under 1 hour doesn't consume a late day.
+- **`excuse_day: 3`** — every student gets 3 free late days across all HWs before penalties kick in. (Helps avoid emails over deadline minutiae.)
+- **`excuse_day_offset`** — adjust the excuse-day count per student, useful for DRC accommodations. Values are additive: in the example above `student0` has 0 excuse days (3 + (−3)) and `student1` has 7 (3 + 4).
 
-Waive specific assignments (and their late penalties) for individual students — the final grade is computed as if the assignment was never assigned:
+By default no late penalty is applied.
 
-```yaml
-waive:
-  student@uni.edu: hw1, hw2
-```
-
-Or waive only the late penalty on specific assignments (the score still counts):
-
-```yaml
-waive_late:
-  student@uni.edu: hw3
-```
-
-### Exclude & substitute assignments
-
-Exclude assignments entirely, or set a minimum completion threshold to auto-exclude unfinished work:
+### Exclude assignments
 
 ```yaml
 assignments:
   exclude:
     - practice_quiz
-  exclude_complete_thresh: 0.6   # drop assignments < 60% submitted
+    - quiz1_v2
 ```
 
-Substitute one assignment's score with the best of several alternatives (useful for merging multiple quiz versions):
+Excludes any assignment whose name contains the given string (case/space-insensitive). By default nothing is excluded.
+
+### Completion threshold
+
+```yaml
+assignments:
+  exclude_complete_thresh: 0.6
+```
+
+Auto-excludes any assignment where fewer than 60% of students received a non-zero score (no submissions count as zero). Applied after other exclusions and substitutions. By default no threshold is applied.
+
+### Substitute assignments
 
 ```yaml
 assignments:
@@ -93,21 +100,61 @@ assignments:
     - quiz1_v3
 ```
 
-### Grade thresholds & email validation
+Replaces each student's `quiz1` score with the maximum percentage among `quiz1`, `quiz1_v2`, and `quiz1_v3`. Useful when you have multiple Gradescope assignments for different versions of the same quiz — each needs its own rubric, but you want a single score for grading. Be sure to also exclude the alternates so they don't double-count. By default nothing is substituted.
 
-Set letter-grade cutoffs and provide an email list to flag students who may have dropped the course:
+### Waive assignments
+
+```yaml
+waive:
+  student0@uni.edu: hw1
+  student1@uni.edu: hw1, hw2, hw3
+```
+
+Waives assignments for individual students. The final grade is computed as if the work was never assigned, and any associated late penalties are also waived. By default nothing is waived.
+
+### Waive late penalties
+
+```yaml
+waive_late:
+  student0@uni.edu: hw1
+  student1@uni.edu: hw1, hw2, hw3
+```
+
+Waives late penalties on specific assignments for individual students (the score still counts). Applied before excused late days are consumed. By default nothing is waived.
+
+### Grade thresholds
 
 ```yaml
 grade_thresh:
   0.93: A
   0.90: A-
-  # ... (sensible defaults are provided)
-
-email_list:
-  - active_student@uni.edu
+  0.87: B+
+  0.83: B
+  0.80: B-
+  0.77: C+
+  0.73: C
+  0.70: C-
+  0.67: D+
+  0.63: D
+  0.60: D-
+  0: E
 ```
 
-See [doc/config.md](doc/config.md) for the complete reference with all options and defaults.
+The lowest percentage (inclusive) to earn each letter grade. The values above are the defaults.
+
+### Email list
+
+```yaml
+email_list:
+  - name0@uni.edu
+  - name1@uni.edu
+```
+
+If provided, any email not found in the Gradescope data triggers a warning, and any Gradescope student not in this list is silently dropped. Useful for filtering out students who have dropped the course.
+
+To handle `@husky.neu.edu` vs `@northeastern.edu` ambiguity, only the portion before `@` is compared.
+
+By default every student in Gradescope is included.
 
 ## Additional Options
 
